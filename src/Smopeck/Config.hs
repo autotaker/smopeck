@@ -11,21 +11,24 @@ data Command = Mock | Test | Proxy
 
 
 mockOpts, testOpts, proxyOpts, opts :: ParserInfo Command
-mockOpts = info parser mempty
+mockOpts = info parser flags
     where
     parser = pure Mock
+    flags = progDesc "Mock mode" <> fullDesc 
 
-testOpts = info parser mempty
+testOpts = info parser flags
     where
     parser = pure Test
+    flags = progDesc "Test mode" <> fullDesc 
 
-proxyOpts = info parser mempty
+proxyOpts = info parser flags
     where
     parser = pure Proxy
+    flags = progDesc "Proxy mode" <> fullDesc 
 
-opts = info parser mempty
+opts = info (parser <**> helper) fullDesc
     where
-    parser = subparser $
+    parser = hsubparser $
         command "mock" mockOpts
         <> command "test" testOpts
         <> command "proxy" proxyOpts
