@@ -15,15 +15,18 @@ import qualified Network.Wai.Handler.Warp as Warp
 
 
 runApp :: MockConfig -> IO ()
-runApp (MockConfig { listenAddr = TcpConfig {..} }) = Warp.runSettings
-    settings
-    app
+runApp MockConfig{ listenAddr = TcpConfig {..} } =
+    Warp.runSettings settings app
   where
-    settings = Warp.defaultSettings & Warp.setPort tcpPort & Warp.setHost
-        (fromString tcpHost)
+    settings =
+        Warp.defaultSettings
+        & Warp.setPort tcpPort
+        & Warp.setHost (fromString tcpHost)
 
 app :: Application
-app req respond = do
-    respond $ responseLBS status200
-                          [("Content-Type", "text/plain")]
-                          "Hello World!"
+app req respond =
+    respond
+        $ responseLBS
+            status200
+            [("Content-Type", "text/plain")]
+            "Hello World!"
