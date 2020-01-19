@@ -1,39 +1,64 @@
 
-type:
-  JsonResponse:
-    header:
-        Content-Type: 'application/json'
+type JsonResponse = HttpResponse {
+    header: { Content-Type: "application/json" }
     body: Json
+}
 
-  HtmlResponse:
-    header:
-        Content-Type: 'text/html'
+type HtmlResponse = HttpResponse {
+    header: { Content-Type: "text/html" }
     body: Html
+}
 
-endpoint:
-    "/hello":
-        GET:
-            response:
-                JsonResponse:
-                    body:
-                        Json:
-                            message: String 
-            
+type Message<T> = "hello $T" -- abbreviation for String[. = "hello $T"]
 
-endpoint."/fizzbuzz".GET:
-    request:
-        param:
-            arg: int
-    response:
-        JsonResponse.body.JSON.answer: 
-            Union:
-                - Int
-                - String
-                - 
-                    error: String
+type Digits = r"\d+" -- abbreviation for String[ . ~= r"\d+" ]
 
-endpoint "/index.html" GET:
-  response:
-    body: 
-        Html.body.Selector.'#header'.innerText:
-            'Hello World'
+type Positive = Int[. > 0]
+
+type EqPair = Json{
+    fst: Int,
+    snd: Int
+}[ .fst = .snd ]
+
+
+"/hello" GET = Endpoint{
+    response.JsonResponse#body.Json#message: String 
+        {-  Abbreviation for
+            response : JsonResponse{
+                body: Json{message: String}
+            }
+        -}
+}
+
+endpoint "/echo" POST {
+    request: HttpRequest{ body : String }
+    response: JsonResponse{ body: Json{message: "Echo request.HttpRequest#body" }}
+}
+                     
+endpoint "/fizzbuzz" GET {
+    request: HttpRequest{ 
+        parameter: URLParamter{
+            arg: Int
+        }
+    }
+    response: JsonResponse {
+        body: Json {
+            answer: Int | "fizz" | "buzz" | "fizzbuzz" | { error: String }
+        }
+    }
+}
+
+endpoint "/index.html" GET {
+    response: HtmlResponse {
+        body: Html{
+            head: HtmlHeader {
+                    title: "Index Page"
+                }
+            body: Selector<"#message"> {
+                    innerText: 'Hello World!'
+                } & Selector<".button"> {
+                    tag: 'Button'
+                }
+        }
+    }
+}
