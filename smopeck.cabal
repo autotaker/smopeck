@@ -16,6 +16,7 @@ library
                  , wai ^>= 3.2.2
                  , warp ^>= 3.3
                  , http-types ^>= 0.12.3
+                 , array ^>= 0.5.3.0
     hs-source-dirs: src
     exposed-modules:
         Smopeck.App
@@ -23,8 +24,13 @@ library
         , Smopeck.App.Mock
         , Smopeck.App.Proxy
         , Smopeck.App.Test
+        , Smopeck.Spec.Parser
+        , Smopeck.Spec.Lexer
+        , Smopeck.Spec.Syntax
     hs-source-dirs: src
     default-language: Haskell2010
+    build-tool-depends: 
+        alex:alex , happy:happy
     build-depends:
         base ^>=4.12,
         optparse-applicative ^>=0.14.3,
@@ -48,6 +54,7 @@ test-suite unit-test
     other-modules:
         Smopeck.ConfigSpec
         , Smopeck.AppSpec
+        , Smopeck.Spec.ParserSpec
     default-language: Haskell2010
     ghc-options: -Wall
     build-depends:

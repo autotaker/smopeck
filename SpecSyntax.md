@@ -30,7 +30,7 @@
               | <RefineExp> '=' <RefineExp>
               | <RefineExp> '=~' <RegexLiteral>
 <RefineAtom> ::= '.' | ('.' <Accessor>)+ | <RefineVar>('.' <Accessor>)* | <Literal>
-<Accessor> ::= (<TypeName> '#') <BindingKey>
+<Accessor> ::= (<TypeName> '#')? <BindingKey>
 ```
 
 ### Endpoint Definition
