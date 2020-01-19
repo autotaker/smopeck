@@ -2,30 +2,31 @@
 module Smopeck.Spec.Lexer where
 }
 
-%wrapper "basic"
+%wrapper "posn"
 
 $capital = [A-Z]
 $small = [a-z]
 $alphanum = [A-Za-z0-9]
 
 tokens :-
-  "type"                                { \_ -> Type }
-  "endpoint"                            { \_ -> Endpoint }
-  $capital $alphanum*                   { \s -> TyName s }
-  $small $alphanum*                     { \s -> Var s }
-  "|"                                   { \_ -> Join }
-  "&"                                   { \_ -> Meet }
-  "="                                   { \_ -> Eq }
-  "<"                                   { \_ -> Lt }
-  ">"                                   { \_ -> Gt }
-  "("                                   { \_ -> Lpar }
-  ")"                                   { \_ -> Rpar }
-  "{"                                   { \_ -> Lbra }
-  "}"                                   { \_ -> Rbra }
-  "["                                   { \_ -> Lsq }
-  "]"                                   { \_ -> Rsq }
-  ":"                                   { \_ -> Colon }
-  ","                                   { \_ -> Comma }
+  $white+                               ;
+  "type"                                { \_ _ -> Type }
+  "endpoint"                            { \_ _ -> Endpoint }
+  $capital $alphanum*                   { \_ s -> TyName s }
+  $small $alphanum*                     { \_ s -> Var s }
+  "|"                                   { \_ _ -> Join }
+  "&"                                   { \_ _ -> Meet }
+  "="                                   { \_ _ -> Eq }
+  "<"                                   { \_ _ -> Lt }
+  ">"                                   { \_ _ -> Gt }
+  "("                                   { \_ _ -> Lpar }
+  ")"                                   { \_ _ -> Rpar }
+  "{"                                   { \_ _ -> Lbra }
+  "}"                                   { \_ _ -> Rbra }
+  "["                                   { \_ _ -> Lsq }
+  "]"                                   { \_ _ -> Rsq }
+  ":"                                   { \_ _ -> Colon }
+  ","                                   { \_ _ -> Comma }
 
 {
 data Token = 

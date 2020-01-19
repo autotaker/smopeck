@@ -55,6 +55,7 @@ test-suite unit-test
         Smopeck.ConfigSpec
         , Smopeck.AppSpec
         , Smopeck.Spec.ParserSpec
+        , Smopeck.Spec.LexerSpec
     default-language: Haskell2010
     ghc-options: -Wall
     build-depends:
