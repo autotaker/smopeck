@@ -7,26 +7,30 @@
 
 ### Type Definition
 ```
-<TypeDef> ::= 'type' <TypeName> <TypeVarTuple>? '=' <TypeExp>
-<TypeExp> ::= <TypeName> <TypeExtension>? <TypeRefinment>? | <Literal> 
-            | <TypeExp> '|' <TypeExp>
-            | <TypeExp> '&' <TypeExp>
+<TypeDef> ::= 'type' <TypeName> '=' <TypeExp>
+<TypeExp> ::= <TypeName> <TypeExtension>? <TypeRefinment>? 
+            | <Literal> 
+            | <TypeExp> '|' <TypeExp>  -- Union type
+            | <TypeExp> '&' <TypeExp>  -- intersection type
             | '(' <TypeExp> ')'
+
 <TypeName> ::= r"[A-Z][A-Za-z0-9]*"
-<TypeExtension> ::= '{' <TypeBinding>* '}'
-<TypeRefinment> ::= '[' <RefineExp> ']'
-<TypeVarTuple>  ::= '<' <TypeVar> (',' <TypeVar>)* '>'
-<TypeVar> ::= r"[A-Z][A-Za-z0-9]*"
+<TypeExtension> ::= '{' <TypeBindingList> '}'
+<TypeRefinment> ::= '[' <RefineList> ']'
+
+<TypeBindingList> ::= <TypeBinding> (',' <TypeBinding>)*
+
 
 <TypeBinding> ::= <BindingKey> ':' <TypeExp>
 <BindingKey> ::= r"[a-z][A-Za-z0-9_\-]*"
 
 <Literal> ::= <DQStringLiteral> | <SQStringLiteral> | <BooleanLiteral> | <NumberLiteral> | <RegexLiteral>
+<RefineList> ::= <RefineExp> (',' <RefineExp>)*
 <RefineExp> ::= <RefineAtom> 
               | <RefineExp> '=' <RefineExp>
               | <RefineExp> '=~' <RegexLiteral>
 <RefineAtom> ::= '.' | ('.' <Accessor>)+ | <RefineVar>('.' <Accessor>)* | <Literal>
-<Accessor> ::= (<TypeName> '#').<BindingKey>
+<Accessor> ::= (<TypeName> '#') <BindingKey>
 ```
 
 ### Endpoint Definition
