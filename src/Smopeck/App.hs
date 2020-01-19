@@ -13,19 +13,6 @@ import qualified Smopeck.App.Proxy    as Proxy
 import qualified Smopeck.App.Test     as Test
 import           Smopeck.Config
 
-data Factory = Factory {
-    mockApp  :: MockConfig -> IO ()
-  , testApp  :: TestConfig -> IO ()
-  , proxyApp :: ProxyConfig -> IO ()
-}
-
-defaultFactory :: Factory
-defaultFactory = Factory {
-    mockApp = Mock.runApp
-    , testApp = \_ -> pure ()
-    , proxyApp = \_ -> pure ()
-}
-
 class MonadIO m => AppM m where
     getCommand :: m Command
     runMockApp :: MockConfig -> m ()
