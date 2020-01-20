@@ -10,8 +10,8 @@ $alphanum = [A-Za-z0-9]
 
 tokens :-
   $white+                               ;
-  "type"                                { \_ _ -> Type }
-  "endpoint"                            { \_ _ -> Endpoint }
+  ^"type"                               { \_ _ -> Type }
+  ^"endpoint"                           { \_ _ -> Endpoint }
   $capital $alphanum*                   { \_ s -> TyName s }
   $small $alphanum*                     { \_ s -> Var s }
   "|"                                   { \_ _ -> Join }
