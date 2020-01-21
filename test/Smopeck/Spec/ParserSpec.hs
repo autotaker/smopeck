@@ -10,9 +10,9 @@ spec =
     describe "Smopeck.Spec.Parser" $ do
         it "parse type synonym def" $ do
             let tokens = [Type, TyName "Sample", Eq, TyName "String"]
-            parseDef tokens `shouldBe` TypeDef "Sample" (TypeExp "String" [] [])
+            runLexerMock parse tokens `shouldBe` Right (TypeDef "Sample" (TypeExp "String" [] []))
 
         it "parse empty endpoint def" $ do
             let tokens = [Endpoint, DQString "/", TyName "GET", Lbra, Rbra]
-            parseDef tokens `shouldBe` EndpointDef "/" "GET" []
+            runLexerMock parse tokens `shouldBe` Right (EndpointDef "/" "GET" [])
 

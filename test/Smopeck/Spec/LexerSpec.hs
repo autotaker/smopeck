@@ -25,8 +25,16 @@ spec =
         it "lex `endpoint` as a reserved token only if it appears at the beginning of a line" $ do
             parse "endpoint" `shouldBe` Right [Endpoint]
             parse" endpoint" `shouldBe` Right [Var "endpoint"]
+
         it "lex empty endpoint def" $ do
             let tokens = [Endpoint, DQString "/", TyName "GET", Lbra, Rbra]
             parse "endpoint \"/\" GET {}" `shouldBe` Right tokens
+
+        it ("double quote escaping " ++ show '"') $
+            runAlex "\" \\\" \"" alexMonadScan `shouldBe` Right (DQString " \" ")
+        it ("double quote escaping " ++ show '\\') $
+            runAlex "\" \\\\ \"" alexMonadScan `shouldBe` Right (DQString " \\ ")
+        it ("double quote escaping " ++ show "\\d") $
+            runAlex "\" \\d \"" alexMonadScan `shouldBe` Right (DQString " \\d ")
 
 

@@ -28,8 +28,7 @@ tokens :-
   <0> ":"                                   { token $ \_ _ -> Colon }
   <0> ","                                   { token $ \_ _ -> Comma }
   <0> \"                                    { begin dqstr }
-  <dqstr> \\\"                              { \_ _ -> pushChar '"' >> alexMonadScan }
-  <dqstr> \\\\                              { \_ _ -> pushChar '\\' >> alexMonadScan }
+  <dqstr> \\[\" \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
   <dqstr> \"                                { (\_ _ -> DQString <$> flushStringValue) `andBegin` 0 }
   <dqstr> [^"]                              { \s len -> let [ch] = lexeme s len in pushChar ch >> alexMonadScan }
 
@@ -68,19 +67,26 @@ alexInitUserState :: AlexUserState
 alexInitUserState = AlexUserState { lexerStringBuffer = [] }
 
 flushStringValue :: Alex String
-flushStringValue = Alex $ \s@AlexState{alex_ust = ust} -> 
-    Right 
-        (s{alex_ust = ust{ lexerStringBuffer = [] }}
-       , reverse $ lexerStringBuffer ust)
+flushStringValue = do
+    ust <- alexGetUserState
+    alexSetUserState ust{ lexerStringBuffer = []}
+    pure $ reverse $ lexerStringBuffer ust
 
 pushChar :: Char -> Alex ()
-pushChar ch = Alex $ \s@AlexState{alex_ust = ust@AlexUserState{ lexerStringBuffer = buf}} ->
-    Right (s{alex_ust = ust{ lexerStringBuffer = ch : buf}}, ())
-dqChar :: Char    
-dqChar = '"'
+pushChar ch = do
+    ust <- alexGetUserState
+    alexSetUserState ust{ lexerStringBuffer = ch : lexerStringBuffer ust }
+
 
 lexeme :: AlexInput -> Int -> String
 lexeme (_,_, _, s) len = take len s
+
+unescape :: String -> Char
+unescape ['\\', 'n'] = '\n'
+unescape ['\\', 'r'] = '\r'
+unescape ['\\', 't'] = '\t'
+unescape ['\\', ch] = ch
+unescape str = error $ "cannot unescape: " ++ show str
 -- Footer
 
 alexEOF :: Alex Token
