@@ -12,8 +12,8 @@ tokens :-
   <0> $white+                               ;
   <0> ^"type"                               { token $ \_ _ -> Type }
   <0> ^"endpoint"                           { token $ \_ _ -> Endpoint }
-  <0> $capital $alphanum*                   { token $ \s len -> TyName $ lexeme s len }
-  <0> $small $alphanum*                     { token $ \s len -> Var $ lexeme s len }
+  <0> $capital $alphanum*                   { token $ \s len -> UpperId $ lexeme s len }
+  <0> $small $alphanum*                     { token $ \s len -> LowerId $ lexeme s len }
   <0> "|"                                   { token $ \_ _ -> Join }
   <0> "&"                                   { token $ \_ _ -> Meet }
   <0> "="                                   { token $ \_ _ -> Eq }
@@ -27,6 +27,8 @@ tokens :-
   <0> "]"                                   { token $ \_ _ -> Rsq }
   <0> ":"                                   { token $ \_ _ -> Colon }
   <0> ","                                   { token $ \_ _ -> Comma }
+  <0> \.                                    { token $ \_ _ -> Dot }
+  <0> \#                                    { token $ \_ _ -> Hash }
   <0> \"                                    { begin dqstr }
   <dqstr> \\[\" \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
   <dqstr> \"                                { (\_ _ -> DQString <$> flushStringValue) `andBegin` 0 }
@@ -35,27 +37,21 @@ tokens :-
 {
 data Token = 
     Type
-  | Eq
-  | Join
-  | Meet
-  | Lpar
-  | Rpar
-  | Lbra
-  | Rbra
-  | Lt
-  | Gt
-  | Lsq
-  | Rsq
+  | Endpoint
+  | Eq | Join | Meet
+  | Lpar | Rpar
+  | Lbra | Rbra
+  | Lt | Gt
+  | Lsq | Rsq
   | Colon
   | Comma
+  | Hash | Dot
   | DQString String
   | SQString String
   | Regex String
   | Number Double
-  | Var String
-  | TyName String
-  | Accessor (Maybe String) String
-  | Endpoint
+  | LowerId String
+  | UpperId String
   | EOF
   deriving(Eq,Ord,Show)
 

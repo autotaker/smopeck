@@ -23,14 +23,14 @@ import Control.Monad.Free
     '='      { Eq }
     '<'      { Lt }
     '>'      { Gt }
-    var      { Var $$ }
     '|'      { Join }
     '&'      { Meet }
     ','      { Comma }
     ':'      { Colon }
     '{'      { Lbra }
     '}'      { Rbra }
-    typeName { TyName $$ }
+    lower    { LowerId $$ }
+    upper    { UpperId $$ }
     dqLiteral { DQString  $$ }
 
 %%
@@ -39,23 +39,24 @@ TopLevelDef : TypeDef       { $1 }
             | EndpointDef   { $1 }
 
 
-TypeDef : type typeName '=' TypeExp { TypeDef $2 $4 }
+TypeDef : type upper '=' TypeExp { TypeDef $2 $4 }
 
-TypeExp : typeName                  { TypeExp $1 [] [] }
+TypeExp 
+    : upper                  { TypeExp $1 [] [] }
+    | upper TypeExtension    { TypeExp $1 $2 [] }
+
 TypeExtension 
     : '{' '}'                   { [] } 
     | '{' TypeExtensionList '}' { $2 }
-TypeExtensionList : TypeBinding ',' TypeExtensionList { $1 : $3 }
-TypeBinding : var ':' TypeExp { ($1, $3) }
+TypeExtensionList 
+    : TypeBinding                       { [$1]    }
+    | TypeBinding ',' TypeExtensionList { $1 : $3 }
+TypeBinding : lower ':' TypeExp { ($1, $3) }
 
-EndpointDef : endpoint dqLiteral typeName TypeExtension { EndpointDef $2 $3 $4 } 
+EndpointDef : endpoint dqLiteral upper TypeExtension { EndpointDef $2 $3 $4 } 
 
 {
 -- Footer
-parseError :: Token -> Free Lexer a 
-parseError token = Free (Error ("unexpected token:" ++ show token))
-
-data Mode = Default | Mock
 
 data Lexer a = Lex (Token -> a) | Error String
     deriving(Functor)
@@ -74,5 +75,7 @@ runLexerMock (Free (Error str)) _ = Left str
 lexerWrap :: (Token -> Free Lexer a) -> Free Lexer a
 lexerWrap f = Free (Lex f)
 
+parseError :: Token -> Free Lexer a 
+parseError token = Free (Error ("unexpected token:" ++ show token))
 
 }

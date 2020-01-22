@@ -17,17 +17,17 @@ spec :: Spec
 spec =
     describe "Smopeck.Spec.Parser" $ do
         it "lex type synonym def" $ do
-            let tokens = [Type, TyName "Sample", Eq, TyName "String"]
+            let tokens = [Type, UpperId "Sample", Eq, UpperId "String"]
             parse "type Sample = String" `shouldBe` Right tokens
         it "lex `type` as a reserved token only if it appears at the beginning of a line" $ do
             parse "type" `shouldBe` Right [Type]
-            parse " type" `shouldBe` Right [Var "type"]
+            parse " type" `shouldBe` Right [LowerId "type"]
         it "lex `endpoint` as a reserved token only if it appears at the beginning of a line" $ do
             parse "endpoint" `shouldBe` Right [Endpoint]
-            parse" endpoint" `shouldBe` Right [Var "endpoint"]
+            parse" endpoint" `shouldBe` Right [LowerId "endpoint"]
 
         it "lex empty endpoint def" $ do
-            let tokens = [Endpoint, DQString "/", TyName "GET", Lbra, Rbra]
+            let tokens = [Endpoint, DQString "/", UpperId "GET", Lbra, Rbra]
             parse "endpoint \"/\" GET {}" `shouldBe` Right tokens
 
         it ("double quote escaping " ++ show '"') $
