@@ -39,11 +39,11 @@ TopLevelDef : TypeDef       { $1 }
             | EndpointDef   { $1 }
 
 
-TypeDef : type upper '=' TypeExp { TypeDef $2 $4 }
+TypeDef : type upper '=' TypeExp { TypeDef (read $2) $4 }
 
 TypeExp 
-    : upper                  { TypeExp $1 [] [] }
-    | upper TypeExtension    { TypeExp $1 $2 [] }
+    : upper                  { TypeExp (read $1) [] [] }
+    | upper TypeExtension    { TypeExp (read $1) $2 [] }
 
 TypeExtension 
     : '{' '}'                   { [] } 

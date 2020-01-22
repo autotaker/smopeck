@@ -1,15 +1,36 @@
 module Smopeck.Spec.Syntax  where
 
+import qualified Data.Map  as M
+import           Text.Read hiding (Number, String)
+
 data TopLevelDef =
     TypeDef TypeName TypeExp
     | EndpointDef Route Method TypeExtension
     deriving(Eq, Ord, Show)
 
-type TypeName = String
+data TypeName = Prim Primitive | User String
+    deriving(Eq,Ord,Show)
 type Route = String
 type Method = String
 type FieldName = String
 type VarName = String
+
+type TypeEnv = M.Map TypeName TypeExp
+data Primitive = PObject | PString | PNumber | PArray | PBool | PNull
+    deriving(Eq,Ord,Show)
+
+instance Read TypeName where
+    readPrec = do
+        Ident x <- lexP
+        case x of
+            "Object" -> pure $ Prim PObject
+            "String" -> pure $ Prim PString
+            "Number" -> pure $ Prim PNumber
+            "Array"  -> pure $ Prim PArray
+            "Bool"   -> pure $ Prim PBool
+            "Null"   -> pure $ Prim PNull
+            _        -> pure $ User x
+
 
 data TypeExp =
     TypeExp {
