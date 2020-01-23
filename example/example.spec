@@ -9,13 +9,24 @@ type HtmlResponse = HttpResponse {
     body: Html
 }
 
+type Json = Number | String | Bool | Object | Array | Null
+
+type Int = Number [ . isInt ]
+type StringArray = Array {
+    element : Bool,
+    length : Int[ . < 10]
+}
+
+type 
+
+
 type Message<T> = "hello $T" -- abbreviation for String[. = "hello $T"]
 
 type Digits = r"\d+" -- abbreviation for String[ . ~= r"\d+" ]
 
 type Positive = Int[. > 0]
 
-type EqPair = Json{
+type EqPair = Object{
     fst: Int,
     snd: Int
 }[ .fst = .snd ]
