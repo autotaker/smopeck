@@ -96,3 +96,216 @@ type Size = Int [ . > 1 ]
 type Digits = r"\d+"
 type Example = Array<Digits, Size> [ .get(0) = "${.length}" ]
 ```
+
+## Mocking Shape
+
+```
+mocked = Array {
+  length = var1,
+  get = f
+}
+constraints:
+  - var1 > 1
+  - forall 0 <= i < var1. f(i) =~ r"\d+"
+  - f(0) = "${var1}"
+
+dependency:
+  - var1 -> forall(i)
+  - forall(i) -> f
+  - var1 -> f(0)
+```
+
+## Generate Values
+
+```
+assign: [var1 = 3]
+constraints:
+  - forall 0 <= i < 3. f(i) =~ r"\d+"
+  - f(0) = "3"
+  
+dependency:
+  - forall(i) -> f
+```
+
+Unfold forall.
+
+```
+assign: 
+  - var1 = 3
+constraints:
+  - f(0) =~ r"\d+"
+  - f(1) =~ r"\d+"
+  - f(2) =~ r"\d+"
+  - f(0) = "3"
+dependency: []
+```
+
+```
+assign: 
+  - var1 = 3
+  - f(0) = "3"
+  - f(1) = "123"
+  - f(2) = "456"
+```
+
+## Apply the assignment to the shape
+
+```
+value = Array {
+  length = 3,
+  get = {
+    0: "3"
+    1: "123"
+    2: "456"
+  }
+}
+```
+
+# Nested ArrayExample 
+```
+type Size = Int [ . > 1 ]
+type Pos = Int [ . > 0 ]
+type Example = Array<Array<Pos, Size>, Size> [ .get(0) = .get(1) ]
+```
+
+## Mocking Shape
+```
+shape = Array {
+  length = var1
+  get = f1
+}
+constraint:
+  - arr.length > 1
+  - forall i. 0 <= i < arr.length
+    - arr.get(i).length > 1
+    - forall j. 0 <= j < arr.get(i).length
+      - arr.get(i).get(j) > 0
+  - arr.get(0) = arr.get(1)
+  
+dependency:
+  - arr.length -> forall(i)
+  - forall(i) -> arr.get(i)
+  - arr.get(i) -> arr.get(i).length
+  - arr.get(i).length -> forall(i.j)
+  - forall(i.j) -> arr.get(i).get(j)
+  - arr.get(1) -> arr.get(0)
+```
+
+## Solve Constraints
+
+Solving `arr.length`
+
+```
+assign:
+  - arr.length = 2
+constraint:
+  - forall i. 0 <= i < 2
+    - arr.get(i).length > 1
+    - forall j. 0 <= j < arr.get(i).length
+      - arr.get(i).get(j) > 0
+```
+
+Solving `forall(i)`
+
+```
+assign:
+  - arr.length = 2
+constraint:
+  - arr.get(0).length > 1
+  - forall j1. 0 <= j1 < arr.get(0).length
+    - arr.get(0).get(j1) > 0
+  - arr.get(1).length > 1
+  - forall j2. 0 <= j2 < arr.get(1).length
+    - arr.get(1).get(j2) > 0
+dependency:
+  - arr.get(0).length -> j1
+  - j1 -> arr.get(0).get
+  - arr.get(1).length -> j2
+  - j2 -> arr.get(1).get
+```
+
+Solving `arr.get(1).length`
+
+```
+assign:
+  - arr.length = 2
+  - arr.get(1).length = 2
+constraint:
+  - arr.get(0).length > 1
+  - forall j1. 0 <= j1 < arr.get(0).length
+    - arr.get(0).get(j1) > 0
+  - forall j2. 0 <= j2 < 2
+    - arr.get(1).get(j2) > 0
+dependency:
+  - arr.get(0).length -> j1
+  - j1 -> arr.get(0).get
+  - j2 -> arr.get(1).get
+```
+
+Solving `forall(j2)`
+
+```
+assign:
+  - arr.length = 2
+  - arr.get(1).length = 2
+constraint:
+  - arr.get(0).length > 1
+  - forall j1. 0 <= j1 < arr.get(0).length
+    - arr.get(0).get(j1) > 0
+  - arr.get(1).get(0) > 0
+  - arr.get(1).get(1) > 0
+dependency:
+  - arr.get(0).length -> j1
+  - j1 -> arr.get(0).get
+```
+
+Solving `arr.get(0).length`
+
+```
+assign:
+  - arr.length = 2
+  - arr.get(1).length = 2
+  - arr.get(0).length = 2
+constraint:
+  - arr.get(0).length > 1
+  - forall j1. 0 <= j1 < 2
+    - arr.get(0).get(j1) > 0
+  - arr.get(1).get(0) > 0
+  - arr.get(1).get(1) > 0
+dependency:
+  - j1 -> arr.get(0).get
+```
+
+Solving `forall(j2)`
+
+```
+assign:
+  - arr.length = 2
+  - arr.get(1).length = 2
+  - arr.get(0).length = 2
+constraint:
+  - arr.get(0).get(0) > 0
+  - arr.get(0).get(1) > 0
+  - arr.get(1).get(0) > 0
+  - arr.get(1).get(1) > 0
+dependency: []
+```
+
+Solving the other
+
+```
+assign:
+  - arr.length = 2
+  - arr.get(1).length = 2
+  - arr.get(0).length = 2
+  - arr.get(0).get(0) = 1
+  - arr.get(0).get(1) = 2
+  - arr.get(1).get(0) = 3
+  - arr.get(1).get(1) = 4
+```
+
+Generate value
+
+```
+value = [ [1,2], [3,4]]
+```
