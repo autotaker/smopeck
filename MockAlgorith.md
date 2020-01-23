@@ -19,9 +19,12 @@ message = "Hello $x"
 z = sqrt(x*x + y*y) 
 ```
 
-# Running Example
+# Basic Algorithm
+
+## Running Example
+
 ```
-type Example = Json{
+type Example = Object{
     name : String,
     gender : 'man' | 'woman' | 'other',
     number : r'\d+-\d+-\d'
@@ -32,7 +35,7 @@ type Example = Json{
   , .adult = int(age) >= 20 ]
 ```
 
-# Unionをランダムに選択してShapeをMock
+## Unionをランダムに選択してShapeをMock
 
 ```
 exampleShape = Object [
@@ -52,7 +55,7 @@ exampleConstraint = [
 ] 
 ```
 
-# 依存グラフを作り、依存がないものから変数を生成
+## 依存グラフを作り、依存がないものから変数を生成
 依存グラフ
 
 ```
@@ -70,7 +73,7 @@ var6 -> ver4
 5. `var6`を生成 `var6 = false`
 4. `var4`を生成 `var4 =~ 'hoge [man, false] .*'` これから`var4 = 'hoge [man, false] fuga'`
 
-# 生成した変数割り当てをshapeに適用
+## 生成した変数割り当てをshapeに適用
 
 ```
 value = Object [
@@ -81,4 +84,15 @@ value = Object [
     ("adult", false),
     ("summary", 'hoge [man, false] fuga')
 ]
+```
+
+# Lazy Mocking Algorithm
+
+
+## Running Example
+
+```
+type Size = Int [ . > 1 ]
+type Digits = r"\d+"
+type Example = Array<Digits, Size> [ .get(0) = "${.length}" ]
 ```
