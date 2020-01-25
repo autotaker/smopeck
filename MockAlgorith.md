@@ -342,4 +342,79 @@ For each step, the algorithm does either one of the following two actios.
 
 Then, update constraint, dependencies and assignments
 
+## Running Example
+```
+type Example = Object{
+    name : String,
+    gender : 'man' | 'woman' | 'other',
+    number : r'\d+-\d+-\d'
+    age : r'\d+'
+    adult : Bool
+    summary : String
+} [ .summary =~ r"${.name} [${.gender}, ${.adult}] .*"
+  , .adult = int(age) >= 20 ]
+
+constraints:  
+- it : Example
+dependency: []
+
+```
+
+ - unfold `it`
+
+```
+constraints:
+- it.name : String
+- it.gender : 'man' | 'woman' | 'other'
+- it.number : '\d+-\d+-\d'
+- it.age : r'\d+'
+- it.adult : Bool
+- it.summary : String
+- it.summary =~ r"${it.name} [${it.gender}, ${it.adult}] .*"
+- it.adult = (int(it.age) >= 20)
+
+dependency:
+- it.name -> it.summary
+- it.gender -> it.summary
+- it.adult -> it.summary
+- it.age -> it.adult
+```
+
+- solving `it.name` as "autotaker"
+- solving `it.number` as "0123-45-6789"
+- solving `it.age` as "28"
+- solving `it.gender` as 'man'
+
+```
+constraints:
+- it.adult : Bool
+- it.summary : String
+- it.summary =~ r"autotaker [man, ${it.adult}] .*"
+- it.adult = true
+
+dependency:
+- it.adult -> it.summary
+```
+
+- solving `it.adult` as `true`
+
+```
+constraints:
+- it.summary : String
+- it.summary =~ r"autotaker [man, true] .*"
+```
+
+- solving `it.summary` as `"autotaker [man, true] hello"`
+
+```
+constraints: []
+assignments:
+- it.name = "autotaker"
+- it.gender = "man"
+- it.age = "28"
+- it.number = "0123-45-6789"
+- it.adult = true
+- it.summary = "autotaker [man, true] hello"
+```
+
 
