@@ -309,3 +309,37 @@ Generate value
 ```
 value = [ [1,2], [3,4]]
 ```
+
+# Algorithm Formalization
+
+- Constraint: これから解くべき制約
+- Assignment: すでに解いた制約
+- Dependency: 左辺値を解く順序を決めるもの
+
+```
+<Constraint> ::= 
+  <LHS> : <TypeExp>
+  <LHS> op <Exp>
+  forall <Exp> <= <var> < <Exp>. <LHS> : <TypeExp>
+  
+<Dependency> ::=
+  <LHS> -> <LHSBlob>
+  
+<LHS> ::= var | <LHS>.<field> | <LHS>.get(<int>)
+<LHSBlob> ::= var | <LHSBlob>.<field> | <LHSBlob>.get(<int>) | | <LHSBlob>.get(*)
+  
+<Assignment> ::=
+  <LHS> = <Value>
+```
+
+## Algorithm Step
+For each step, the algorithm does either one of the following two actios.
+1. If there are no constraints, terminates the algorithm
+1. If there is a l-value that is dependency-free, solve the constraints of the l-value.
+  - If the l-value is a forall variable, unfold the corresponding forall constraint.
+  - Otherwise, gather constraints for the l-value and assign a value that satisfies the constraints.
+2. Otherwise, unfold a constraints of the form `<LHS> : <TypeExp>`
+
+Then, update constraint, dependencies and assignments
+
+
