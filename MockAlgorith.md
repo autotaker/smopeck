@@ -1,6 +1,134 @@
 
 # Mock アルゴリズム
 
+# Algorithm Formalization
+
+- Constraint: これから解くべき制約
+- Assignment: すでに解いた制約
+- Dependency: 左辺値を解く順序を決めるもの
+
+```
+<Constraint> ::= 
+  <LHS> : <TypeExp>
+  <LHS> op <Exp>
+  forall <Exp> <= <var> < <Exp>. <LHS> : <TypeExp>
+  
+<Dependency> ::=
+  <LHS> -> <LHSBlob>
+  
+<LHS> ::= var | <LHS>.<field> | <LHS>.get(<int>)
+<LHSBlob> ::= var | <LHSBlob>.<field> | <LHSBlob>.get(<int>) | | <LHSBlob>.get(*)
+  
+<Assignment> ::=
+  <LHS> = <Value>
+```
+
+## Algorithm Step
+For each step, the algorithm does either one of the following two actios.
+1. If there are no constraints, terminates the algorithm
+1. If there is a l-value that is dependency-free, solve the constraints of the l-value.
+  - If the l-value is a forall variable, unfold the corresponding forall constraint.
+  - Otherwise, gather constraints for the l-value and assign a value that satisfies the constraints.
+2. Otherwise, unfold a constraints of the form `<LHS> : <TypeExp>`
+
+Then, update constraint, dependencies and assignments
+
+
+## Data Types
+
+### Values
+
+```
+<Value> ::= <BoolValue> | <NumberValue> | <NullValue> | <StringValue> | <ObjectValue> | <ArrayValue>
+<BoolValue> ::= true | false
+<NumberValue> ::= Real Numbers
+<NullValue> ::= null
+<StringValue> ::= Strings
+<ObjectValue> ::= { (<Key> : <SymValue>)* }
+<ArrayValue> ::= { length : <SymValue>, forall 0 < i <= <SymValue>. get(i) : <SymValue> }
+<SymValue> ::= <Value> | symbol
+```
+
+### Constraints
+
+```
+<Constraint> ::= symbol : <TypeExp> 
+               | symbol <CompOp> <Exp>
+```
+
+### Dependency
+
+```
+<Dependency> ::= symbol -> symBlob
+```
+
+## Algorithms
+
+### Calculate Dependency
+- Input
+  - Set of Symbols `V`
+  - Dependency `D`
+- Output
+  - Dependency Graph `G = (V, E)`
+  
+- Algorithm
+  - Iterate until `E` is saturated
+    - for each symbol of the form `s.field` in `V`:
+      - add edge `s -> s.field` to `E`
+    - for each dependency `from -> toBlob`:
+       - for each symbol `s` in `V`:
+         - if `toBlob` matches `s`: add edge `from -> s` to `E`
+
+### Find a dependency-free symbol
+- Input
+  - Dependency Graph `G = (V, E)`
+  - Set of already assigned symbols `S`
+- Output
+  - a symbol `s` such that `prev_G(s)` in  `S`
+  - if there are no such symbol, return `null`
+  
+### Solve constraints
+- Input
+  - Assignments `A`
+  - Symbol `s`
+  - Constraints `C` whose LHS are equal to `s`.
+- Output
+  - a value of `s` that satisifes `C` under `A`
+  - Additional constraints `Cs`
+  - Additional dependencies `Ds`
+- Algorithm
+  - Normalize `C` to `s : Prim_1 ext_1 ref_1 | ... | Prim_n ext_n ref_n `
+  - Solve each `s : Prim_i ext_i ref_i`, case analysis of `Prim_i`
+     - case `Number`
+       - `ext_i` must be empty
+       - solve `ref_i` by using Range logic
+     - case `String`
+       - `ext_i` must be empty
+       - solve `ref_i` by using Regular Expression logic
+     - case `Bool` | case `Null` 
+       - try all possible values `true`, `false`, or `null`.
+     - case `Object`
+       - `ext_i` is of the form `{ field_1 : tyExp_1, ..., field_k : tyExp_k }`
+       - Assign as `Object{ field_1 : s.field_1 ... , field_k : s.field_k }` according to `ext_i`.
+       - Additional constraints
+         - `s.field_1 : tyExp_1` ...   `s.field_n : tyExp_n`
+         - `s.accessor_i op exp_i` for each `.accessor_i op exp_i` in `ref_i`
+         - `s.field_1 = exp.field_1` ... `s.field_k = exp.field_k` for each `. = exp` in `ref_i`
+       - Additional dependencies
+         - `sym -> s.accessor_i` for each symbol `sym` occurs in `exp_i` for each `s.accessor_i op exp_i` in additional constraints
+     - case `Array`
+       - `ext_i` must be of the form `{ length : tyExp1, elements : tyExp2 }`
+       - Assign as `Array{ length : s.length, forall 0 <= ix < s.length. get(ix) : tyExp2 }` where `ix` is a fresh symbol.
+       - Additional constraints
+         - `s.length : tyExp1`
+         - `forall 0 <= ix < s.length. s.get(ix) : tyExp2`
+         - `s.accessor_i op exp_i` for each `.accessor_i op exp_i` in `ref_i`
+         - `s.length = exp.length`, `forall 0 <= ix' < s.length. s.get(ix') = exp.get(ix')` for each `. = exp` in `ref_i`
+       - Additional dependencies
+         - `s.length -> ix` and `ix -> s.get(*)` for each additional constraint of the form `forall 0 <= ix < s.length. s.get(ix) ... ` 
+       
+     
+     
 # Refinementの構文
 制約は　`var compOp exp` の形に制限する
 
@@ -310,37 +438,7 @@ Generate value
 value = [ [1,2], [3,4]]
 ```
 
-# Algorithm Formalization
 
-- Constraint: これから解くべき制約
-- Assignment: すでに解いた制約
-- Dependency: 左辺値を解く順序を決めるもの
-
-```
-<Constraint> ::= 
-  <LHS> : <TypeExp>
-  <LHS> op <Exp>
-  forall <Exp> <= <var> < <Exp>. <LHS> : <TypeExp>
-  
-<Dependency> ::=
-  <LHS> -> <LHSBlob>
-  
-<LHS> ::= var | <LHS>.<field> | <LHS>.get(<int>)
-<LHSBlob> ::= var | <LHSBlob>.<field> | <LHSBlob>.get(<int>) | | <LHSBlob>.get(*)
-  
-<Assignment> ::=
-  <LHS> = <Value>
-```
-
-## Algorithm Step
-For each step, the algorithm does either one of the following two actios.
-1. If there are no constraints, terminates the algorithm
-1. If there is a l-value that is dependency-free, solve the constraints of the l-value.
-  - If the l-value is a forall variable, unfold the corresponding forall constraint.
-  - Otherwise, gather constraints for the l-value and assign a value that satisfies the constraints.
-2. Otherwise, unfold a constraints of the form `<LHS> : <TypeExp>`
-
-Then, update constraint, dependencies and assignments
 
 ## Running Example
 ```
@@ -416,5 +514,3 @@ assignments:
 - it.adult = true
 - it.summary = "autotaker [man, true] hello"
 ```
-
-
