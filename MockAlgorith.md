@@ -1,42 +1,28 @@
 
-# Mock アルゴリズム
+# Mocking Algorithm
 
 # Algorithm Formalization
 
-- Constraint: これから解くべき制約
-- Assignment: すでに解いた制約
-- Dependency: 左辺値を解く順序を決めるもの
-
-```
-<Constraint> ::= 
-  <LHS> : <TypeExp>
-  <LHS> op <Exp>
-  forall <Exp> <= <var> < <Exp>. <LHS> : <TypeExp>
-  
-<Dependency> ::=
-  <LHS> -> <LHSBlob>
-  
-<LHS> ::= var | <LHS>.<field> | <LHS>.get(<int>)
-<LHSBlob> ::= var | <LHSBlob>.<field> | <LHSBlob>.get(<int>) | | <LHSBlob>.get(*)
-  
-<Assignment> ::=
-  <LHS> = <Value>
-```
-
-## Algorithm Step
-For each step, the algorithm does either one of the following two actios.
-1. If there are no constraints, terminates the algorithm
-1. If there is a l-value that is dependency-free, solve the constraints of the l-value.
-  - If the l-value is a forall variable, unfold the corresponding forall constraint.
-  - Otherwise, gather constraints for the l-value and assign a value that satisfies the constraints.
-2. Otherwise, unfold a constraints of the form `<LHS> : <TypeExp>`
-
-Then, update constraint, dependencies and assignments
-
-
 ## Data Types
 
+
+### Symbols
+A *symbol* is used to describe the address of some location. 
+A *symbol* blob is a pattern that matches a set of symbols.
+
+```
+<Symbol> ::= var | <Symbol>.<Field> | <Symbol>.get(<IntegerOrVar>)
+
+<SymbolBlob> ::= var | <SymbolBlob>.<Field> | <Symbol>.get(<IntegerOrBlob>)
+```
+
 ### Values
+A *value* represent the data stored at symbol. 
+A value is constructed *lazily* for objects and arrays, that is
+an object value is a finite binding from fields to symbols (not to values) and
+an array value is a special object that has the `length` field and parameterized `get(i)` field.
+
+An *assignment* is a finite map from symbols to values.
 
 ```
 <Value> ::= <BoolValue> | <NumberValue> | <NullValue> | <StringValue> | <ObjectValue> | <ArrayValue>
@@ -44,25 +30,59 @@ Then, update constraint, dependencies and assignments
 <NumberValue> ::= Real Numbers
 <NullValue> ::= null
 <StringValue> ::= Strings
-<ObjectValue> ::= { (<Key> : <SymValue>)* }
-<ArrayValue> ::= { length : <SymValue>, forall 0 < i <= <SymValue>. get(i) : <SymValue> }
-<SymValue> ::= <Value> | symbol
+<ObjectValue> ::= { (<Field> : <Symbol>)* }
+<ArrayValue> ::= { length : <Symbol>, forall 0 < i <= <Symbol>. get(i) : <SymValue> }
+
+<Assignment> ::= { (<Symbol> := <Value>)* }
 ```
+
 
 ### Constraints
+*Constraints* denotes the restrictions symbols must satisfy.
+There are three forms of constraints. 
 
 ```
-<Constraint> ::= symbol : <TypeExp> 
-               | symbol <CompOp> <Exp>
+<Constraint> ::= <Symbol> : <TypeExp> 
+               | <Symbol> <CompOp> <Exp>
+               | forall 0 <= var < <Symbol>. <Constraint>
 ```
 
 ### Dependency
+*Dependencies* are directed edges between symbols, which is used to
+determine the order to solve constraints.
+A set dependencies is represented as an arrow from `<Symbol> -> <SymbolBlob>`, which 
+means all symbols that matches the RHS depends on the LHS.
 
 ```
-<Dependency> ::= symbol -> symBlob
+<Dependency> ::= <Symbol> -> <SymbolBlob>
 ```
 
 ## Algorithms
+
+### Main Algorihm
+- Input
+  - Type Definitions `Def`
+  - Target type `tyExp`
+- Output
+  - JSON value `v` that satisfies `v : TypeExp`
+- Algorithm
+  - initialize variables
+    - `Cs := { it : tyExp }`
+    - `Ds := []`
+    - `V := { it }`
+    - `A := {}`
+  - until `Cs` will be empty
+    - `G := calculate dependency(V, Ds)`
+    - `s := FindDepFreeSymbol(G, dom(A))`
+    - Let `C` be the set of constraints in `Cs` whose LHS is `s`.
+    - `v, Cs', Ds', V' := SolveConstraints(A, s, C)`
+    - update variables
+      - `V := V' \cup V`
+      - `Cs := Cs \ C \cup Cs'`
+      - `Ds := Ds \cup Ds'`
+      - `A[s] := v`
+  - return `eval(A, it)`
+  
 
 ### Calculate Dependency
 - Input
