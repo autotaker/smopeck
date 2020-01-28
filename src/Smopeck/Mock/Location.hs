@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
-module Smopeck.Spec.Location where
+module Smopeck.Mock.Location where
 import           Smopeck.Spec.Syntax
 
 data LocationF a =
