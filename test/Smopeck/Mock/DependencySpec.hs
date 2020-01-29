@@ -16,14 +16,14 @@ spec =
                 Root "it" `Field` "field1" `Get` 1,
                 Root "it" `Field` "field1" `Field`  "length"
                 ]
-        it "" $ do
+        it "normal edge" $ do
             let edges = S.fromList []
                 depEdges = [ DepEdge (Root "it" `Field` "field1") (Root "it" `Field` "field2") ]
                 edges' = S.fromList [
                     (Root "it" `Field` "field1", Root "it" `Field` "field2")
                     ]
             updateDepGraph (vertices, edges) depEdges `shouldBe` (vertices, edges')
-        it "" $ do
+        it "blob edge" $ do
             let edges = S.fromList []
                 depEdges = [ DepEdge (Root "it" `Field` "field2") (Root "it" `Field` "field1" `Get` BlobAny) ]
                 edges' = S.fromList [
