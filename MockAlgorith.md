@@ -47,6 +47,14 @@ There are three forms of constraints.
                | forall 0 <= var < <Symbol>. <Constraint>
 ```
 
+Example
+
+```
+it : Number [ . <  other ] -- depends on other
+it : Object {..} [ .name < other] -- it does not depend on other
+it : Object {..} [ . = other ] -- it does not depend on other
+```
+
 ### Dependency
 *Dependencies* are directed edges between symbols, which is used to
 determine the order to solve constraints.

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Smopeck.Mock.Dependency where
 
 import qualified Data.Map              as M
@@ -17,12 +18,22 @@ updateDepGraph (vertices, edges0) depEdges = (vertices, go edges0)
              | otherwise = go edges'
         where
         edges' = foldl step edges depEdges
-    step edges depEdge = foldl stepV edges vertices
+    step !edges depEdge = foldl stepV edges vertices
         where
-        stepV edges location
+        stepV !edges location
             | match (depTo depEdge) location =
                 S.insert (depFrom depEdge, location) edges
             | otherwise = edges
+
+findDepFreeLocation :: DepGraph -> S.Set Location -> Maybe Location
+findDepFreeLocation (vertices, edges) assigned = S.lookupMin result
+    where
+    cands = vertices S.\\ assigned
+    result = foldl step cands edges
+    step !cands (from, to)
+        | S.notMember to cands = cands
+        | S.member from assigned = cands
+        | otherwise = S.delete to cands
 
 
 
