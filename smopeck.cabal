@@ -17,6 +17,7 @@ library
         Smopeck.App.Mock
         Smopeck.App.Proxy
         Smopeck.App.Test
+        Smopeck.Spec.Exp
         Smopeck.Spec.Parser
         Smopeck.Spec.Lexer
         Smopeck.Spec.Syntax
@@ -24,6 +25,7 @@ library
         Smopeck.Mock.Location
         Smopeck.Mock.Value
         Smopeck.Mock.Dependency
+        Smopeck.Mock.Constraint
     hs-source-dirs: src 
     default-language: Haskell2010
     build-tool-depends: 
