@@ -8,7 +8,7 @@
 ### Type Definition
 ```
 <TypeDef> ::= 'type' <TypeName> '=' <TypeExp>
-<TypeExp> ::= <TypeName> <TypeExtension>? <TypeRefinment>? 
+<TypeExp> ::= <TypeName> <BindAs>? <TypeExtension>? <TypeRefinment>? 
             | <Literal> 
             | <TypeExp> '|' <TypeExp>  -- Union type
             | <TypeExp> '&' <TypeExp>  -- intersection type
@@ -17,6 +17,8 @@
 <TypeName> ::= r"[A-Z][A-Za-z0-9]*"
 <TypeExtension> ::= '{' <TypeBindingList> '}'
 <TypeRefinment> ::= '[' <RefineList> ']'
+
+<BindAs> ::= '@' <LowerId>
 
 <TypeBindingList> ::= <TypeBinding> (',' <TypeBinding>)*
 

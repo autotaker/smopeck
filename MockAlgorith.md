@@ -53,6 +53,43 @@ Example
 it : Number [ . <  other ] -- depends on other
 it : Object {..} [ .name < other] -- it does not depend on other
 it : Object {..} [ . = other ] -- it does not depend on other
+
+```
+
+
+Normalized constraint
+
+```
+<NConstraint> ::= <Location> : <NType> [ <DNFFormula>, <Assertion> ]
+                | forall <Location> in [<Exp> .. <Exp>]. <TypeExp>
+<DNFFormula> :: <Clause> ('||' <Clause>)*
+<Clause> ::= <Formula> ('&&' <Formula>)*
+<Assertion> ::= <Exp>
+<Formula> ::=  . <CompOp> <Exp>
+<NType> ::= SNull | SNumber | SString 
+         | SObject@it { field_1 : typeExp_1, ..., field_n : typeExp_n }
+         | SArray@it { length : typeExp_1, get(i) : typeExp_2 }
+```
+
+
+
+type Example = Array@a {
+  length : Pos [ . < 10]
+  get(i) : Number [ . = a.length - i ]
+}
+it.length : Number [ . > 0 && . < 10]
+get(i) : SNumber [ . = it.length - i]
+
+type Example2 = Array@a {
+  length : Pos,
+  get(i) : Array@b {
+    length : Pos [ . > i + 1],
+    get(j) : [ . > a.length + a.get(a.length - 1 - i).length + j ]
+  }
+}
+
+it.length : Pos
+forall i . it.get(i) : [ . > it.length + it.get(it.length - 1 - i).length + j ]
 ```
 
 ### Dependency
