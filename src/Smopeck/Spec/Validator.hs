@@ -18,11 +18,15 @@ validateJson tyEnv env = go
     go :: Value -> TypeExp -> Except String ()
     go val (UnionType ty1 ty2) = go val ty1 <|> go val ty2
     go val (IntersectionType ty1 ty2) = go val ty1 >> go val ty2
-    go (String txt) (TypeExp (Prim PString) _ tyRef) = matchString txt tyRef
-    go (Number num) (TypeExp (Prim PNumber) _ tyRef) = matchNumber num tyRef
-    go (Bool bool) (TypeExp (Prim PBool) _ tyRef) = matchBool bool tyRef
-    go Null (TypeExp (Prim PNull) _ _) = pure ()
-    go (Object obj) (TypeExp (Prim PObject) ext tyRef) = matchObject obj ext tyRef
+    go (String txt) tyExp | Prim PString <- typeExpName tyExp =
+        matchString txt (typeExpRef tyExp)
+    go (Number num) tyExp | Prim PNumber <- typeExpName tyExp =
+        matchNumber num (typeExpRef tyExp)
+    go (Bool bool) tyExp | Prim PBool <- typeExpName tyExp =
+        matchBool bool (typeExpRef tyExp)
+    go Null tyExp | Prim PNull <- typeExpName tyExp = pure ()
+    go (Object obj) tyExp | Prim PObject <- typeExpName tyExp =
+        matchObject obj (typeExpExt tyExp) (typeExpRef tyExp)
     go val ty = throwError $ show val ++ " does not match type: " ++ show ty
     matchString :: Text -> TypeRefine -> Except String ()
     matchString txt refs = pure () -- to be implemented

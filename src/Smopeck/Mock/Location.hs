@@ -1,16 +1,20 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Smopeck.Mock.Location where
-import           Smopeck.Spec.Syntax
 
-data LocationF a =
-    Root String
-    | Field (LocationF a) FieldName
-    | Get (LocationF a) a
+data LocationF root a =
+    Root root
+    | Field (LocationF root a) FieldName
+    | Get (LocationF root a) a
     deriving (Eq, Ord, Show, Functor)
 
 data Blob = BlobAny | BlobInt Int
-type LocationBlob = LocationF Blob
-type Location = LocationF Int
+type LocationBlob = LocationF Root Blob
+type Location = LocationF Root Int
+
+data Root = Relative | Absolute String
+    deriving(Eq, Ord, Show)
+type FieldName = String
+type RLocationF a = LocationF () a
 
 match :: LocationBlob -> Location -> Bool
 match (Root s1) (Root s2) = s1 == s2

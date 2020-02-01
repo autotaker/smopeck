@@ -18,6 +18,7 @@ library
         Smopeck.App.Proxy
         Smopeck.App.Test
         Smopeck.Spec.Exp
+        Smopeck.Spec.TypeExp
         Smopeck.Spec.Parser
         Smopeck.Spec.Lexer
         Smopeck.Spec.Syntax

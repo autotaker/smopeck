@@ -1,7 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 module Smopeck.Spec.Syntax  where
 
-import qualified Data.Map  as M
-import           Text.Read hiding (Number, String)
+import qualified Data.Map              as M
+import           Smopeck.Mock.Location
+import           Smopeck.Spec.Exp
+import           Text.Read             hiding (Number, String)
 
 data TopLevelDef =
     TypeDef TypeName TypeExp
@@ -12,7 +15,6 @@ data TypeName = Prim Primitive | User String
     deriving(Eq,Ord,Show)
 type Route = String
 type Method = String
-type FieldName = String
 type VarName = String
 
 type TypeEnv = M.Map TypeName TypeExp
@@ -34,29 +36,18 @@ instance Read TypeName where
 
 data TypeExp =
     TypeExp {
-        typeExpName :: TypeName
-      , typeExpExt  :: TypeExtension
-      , typeExpRef  :: TypeRefine
+        typeExpName :: TypeName,
+        typeExpBind :: VarName,
+        typeExpExt  :: TypeExtension,
+        typeExpRef  :: TypeRefine
     }
     | UnionType TypeExp TypeExp
     | IntersectionType TypeExp TypeExp
     deriving(Eq, Ord, Show)
 type TypeExtension = [ (FieldName, TypeExp) ]
-type TypeRefine = [ RefineExp ]
-
-data RefineExp =
-    RefineAtom {
-        refineAtomVar        :: VarName,
-        refineAtomFieldChain :: [FieldAccessor]
-      }
-    | RefineLiteral Literal
-    | RefineBin BinOp RefineExp RefineExp
-    deriving(Eq, Ord,Show)
-data FieldAccessor =
-    FieldAccessor {
-        fieldTypeName :: Maybe TypeName
-      , fieldName     :: FieldName
-    } deriving(Eq, Ord,Show)
+newtype Exp = Exp (ExpF Parsed (LocationF Root Exp))
+    deriving(Eq, Ord, Show)
+type TypeRefine = [ (RLocationF Exp, Op, Exp) ]
 
 data Literal =
     DQStringLiteral String
