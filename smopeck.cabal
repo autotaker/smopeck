@@ -63,6 +63,7 @@ test-suite unit-test
     other-modules:
         Smopeck.ConfigSpec
         Smopeck.AppSpec
+        Smopeck.Spec.ExpSpec
         Smopeck.Spec.ParserSpec
         Smopeck.Spec.LexerSpec
         Smopeck.Spec.ValidatorSpec

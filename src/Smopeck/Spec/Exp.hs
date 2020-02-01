@@ -1,10 +1,14 @@
 {-# LANGUAGE DeriveFunctor #-}
-module Smopeck.Spec.Exp where
+module Smopeck.Spec.Exp(
+    eval,
+    ExpF(..),
+    Literal(..),
+    Op(..)) where
 import           Control.Monad
 import qualified Data.Map        as M
 import           Data.Scientific
 
-data ExpF a = Literal Literal | Var a | App Op [ExpF a]
+data ExpF a = Literal !Literal | Var !a | App !Op [ExpF a]
     deriving (Eq, Ord, Show, Functor)
 
 instance Applicative ExpF where
@@ -22,17 +26,23 @@ data Op = Add | Sub | Mul | Div
 
 data Literal =
     LNull
-    | LBool Bool
-    | LNumber Scientific
-    | LString String
-    | LRegex String
+    | LBool !Bool
+    | LNumber !Scientific
+    | LString !String
+    | LRegex !String
+    deriving(Show, Eq, Ord)
 
-eval :: (Eq a, Ord a, Show a) =>M.Map a Literal -> Exp a -> Literal
-eval env (Literal l) = l
-eval env (Var x) = case M.lookup x env of
-    Nothing -> error $ "undefined variable: " ++ show x
-    Just l  -> l
-eval env (App op args) = interpret op $ map (eval env) args
+eval :: (Eq a, Ord a, Show a) =>M.Map a Literal -> ExpF a -> Either a Literal
+eval env = go
+    where
+    go (Literal l)   = Right l
+    go (Var x)       = Left x
+    go (App op args) = Right $ interpret op $ map (deref . go) args
+
+    deref (Left x) = case M.lookup x env of
+        Just l  -> l
+        Nothing -> error $ "failed to dereference:" ++ show x
+    deref (Right l) = l
 
 interpret :: Op -> [Literal] -> Literal
 interpret Add [LNumber x, LNumber y] = LNumber $ x + y
@@ -46,6 +56,6 @@ interpret Lt [x, y] = LBool $ x < y
 interpret Gt [x, y] = LBool $ x > y
 interpret Lte [x, y] = LBool $ x <= y
 interpret Gte [x, y] = LBool $ x >= y
-interpret Match [x, LRegex s] = LBool $ undefined
+interpret Match [x, LRegex s] = undefined
 interpret op args =
     error $ "no interpretation for :" ++ show op ++ " " ++ show args
