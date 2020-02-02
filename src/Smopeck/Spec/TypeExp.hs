@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE KindSignatures     #-}
@@ -65,7 +66,7 @@ type DefaultTypeEnv m = M.Map UserType (TypeExp m HDefault)
 type WHNFTypeEnv m = M.Map UserType (TypeExp m WHNF)
 data Primitive = PObject | PString | PNumber | PArray | PBool | PNull
     deriving(Eq,Ord,Show)
-type TypeExtension mode = [ (FieldName, TypeExp mode HDefault)]
+type TypeExtension mode = M.Map FieldName (TypeExp mode HDefault)
 
 newtype Exp mode = Exp (ExpF mode (LocationF Root (Exp mode)))
 
@@ -74,12 +75,12 @@ type TypeRefine mode = [ (RLocationF (Exp mode), Op, Exp mode)]
 evalTypeExp :: WHNFTypeEnv m -> TypeExp m HDefault -> TypeExp m WHNF
 evalTypeExp env (TypeExp TypeExpF{
     typeExpName = Prim prim,
-    typeExpExt = [],
+    typeExpExt = ext,
     typeExpRef = ref,
     typeExpBind = bindName
     }) = TypeExp TypeExpF{
         typeExpName = Prim prim,
-        typeExpExt = [],
+        typeExpExt = ext,
         typeExpRef = ref,
         typeExpBind = bindName
         }
@@ -88,7 +89,7 @@ evalTypeExp env (TypeExp TypeExpF{
     typeExpExt = ext,
     typeExpRef = ref,
     typeExpBind = bindName
-    }) = extend typeDef ext bindName ref
+    }) = extend bindName ext ref typeDef
         where
         typeDef = env M.! userType
 evalTypeExp env (TypeUnion ty1 ty2) =
@@ -96,8 +97,54 @@ evalTypeExp env (TypeUnion ty1 ty2) =
 evalTypeExp env (TypeIntersection ty1 ty2) =
     intersect (evalTypeExp env ty1) (evalTypeExp env ty2)
 
-extend :: TypeExp m WHNF -> TypeExtension m -> VarName -> TypeRefine m -> TypeExp m WHNF
-extend _ _ _ _ = undefined
+extend :: VarName -> TypeExtension m -> TypeRefine m -> TypeExp m WHNF -> TypeExp m WHNF
+extend bindName ext ref = go
+    where
+    go (TypeUnion ty1 ty2)= TypeUnion (go ty1) (go ty2)
+    go (TypeExp TypeExpF{
+        typeExpName = typeName,
+        typeExpBind = bindName0,
+        typeExpExt = ext0,
+        typeExpRef = ref0
+    }) = TypeExp TypeExpF {
+            typeExpName = typeName,
+            typeExpBind = bindName0,
+            typeExpExt = extendTypeExt ext0 ext',
+            typeExpRef = ref0 ++ ref'
+        }
+        where
+        ext' = substTypeExt bindName bindName0 ext
+        ref' = substTypeRefine bindName bindName0 ref
+
+extendTypeExt :: TypeExtension m -> TypeExtension m -> TypeExtension m
+extendTypeExt = M.unionWith (\a b -> b)
+
+substTypeExt :: VarName -> VarName -> TypeExtension m -> TypeExtension m
+substTypeExt bindNameFrom bindNameTo = fmap (substTypeExp bindNameFrom bindNameTo)
+
+substTypeRefine :: VarName -> VarName -> TypeRefine m -> TypeRefine m
+substTypeRefine bindNameFrom bindNameTo = map (\(lhs, op, rhs) ->
+    (fmap (substExp bindNameFrom bindNameTo) lhs, op, substExp bindNameFrom bindNameTo rhs))
+
+substExp :: VarName -> VarName -> Exp m -> Exp m
+substExp bindNameFrom bindNameTo (Exp exp) =
+    Exp (fmap (substLocation bindNameFrom bindNameTo) exp)
+
+substLocation :: VarName -> VarName -> LocationF Root (Exp m) -> LocationF Root (Exp m)
+substLocation bindNameFrom bindNameTo = fmap (substExp bindNameFrom bindNameTo)
+
+substTypeExp :: VarName -> VarName -> TypeExp m HDefault -> TypeExp m HDefault
+substTypeExp bindNameFrom bindNameTo = go
+    where
+        go (TypeExp ty)
+            | typeExpBind ty == bindNameFrom = TypeExp ty
+            | typeExpBind ty == bindNameTo = error "alpha rename"
+            | otherwise = TypeExp ty{
+                typeExpExt = substTypeExt bindNameFrom bindNameTo (typeExpExt ty),
+                typeExpRef = substTypeRefine bindNameFrom bindNameTo (typeExpRef ty)
+            }
+        go (TypeUnion ty1 ty2) = TypeUnion (go ty1) (go ty2)
+        go (TypeIntersection ty1 ty2) = TypeIntersection (go ty1) (go ty2)
 
 intersect :: TypeExp m WHNF -> TypeExp m WHNF -> TypeExp m WHNF
 intersect _ _ = undefined

@@ -55,6 +55,7 @@ deriving instance (Show (Literal Desugar))
 deriving instance (Eq (Literal Desugar))
 deriving instance (Ord (Literal Desugar))
 
+
 eval :: (Eq a, Ord a, Show a) =>M.Map a (Literal Desugar) -> ExpF Desugar a -> Either a (Literal Desugar)
 eval env = go
     where
