@@ -23,15 +23,7 @@ data TypeExp mode head where
     TypeExp :: TypeExpF mode head -> TypeExp mode head
     TypeUnion :: TypeExp mode head -> TypeExp mode head -> TypeExp mode head
     TypeIntersection :: TypeExp mode HDefault -> TypeExp mode HDefault -> TypeExp mode HDefault
-
-{-
-data TypeExpF (mode :: Mode) head =
-    | T
-    | UnionType (TypeExp mode head) (TypeExp mode head)
-    | IntersectionType (TypeExp mode head) (TypeExp mode head)
-    deriving(Functor)
-
--}
+    TypeExpVoid :: TypeExp mode WHNF
 
 data HeadMode = HDefault | WHNF
 
@@ -147,4 +139,22 @@ substTypeExp bindNameFrom bindNameTo = go
         go (TypeIntersection ty1 ty2) = TypeIntersection (go ty1) (go ty2)
 
 intersect :: TypeExp m WHNF -> TypeExp m WHNF -> TypeExp m WHNF
-intersect _ _ = undefined
+intersect ty1 (TypeUnion ty2a ty2b) =
+    TypeUnion (intersect ty1 ty2a) (intersect ty1 ty2b)
+intersect (TypeUnion ty1a ty1b) ty2 =
+    TypeUnion (intersect ty1a ty2) (intersect ty1b ty2)
+intersect (TypeExp ty1) (TypeExp ty2)
+    | typeExpName ty1 /= typeExpName ty2 = TypeExpVoid
+    | typeExpName ty1 == typeExpName ty2 =
+        TypeExp TypeExpF {
+            typeExpName = typeExpName ty1,
+            typeExpBind = typeExpBind ty1,
+            typeExpExt = M.unionWith TypeIntersection (typeExpExt ty1) ext2,
+            typeExpRef = typeExpRef ty1 ++ ref2
+        }
+    where
+        bindNameFrom = typeExpBind ty2
+        bindNameTo = typeExpBind ty1
+        ext2 = substTypeExt bindNameFrom bindNameTo (typeExpExt ty2)
+        ref2 = substTypeRefine bindNameFrom bindNameTo (typeExpRef ty2)
+
