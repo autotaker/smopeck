@@ -69,9 +69,6 @@ Normalized constraint
 <NType> ::= SNull | SNumber | SString 
          | SObject@it { field_1 : typeExp_1, ..., field_n : typeExp_n }
          | SArray@it { length : typeExp_1, get(i) : typeExp_2 }
-```
-
-
 
 type Example = Array@a {
   length : Pos [ . < 10]
@@ -90,6 +87,7 @@ type Example2 = Array@a {
 
 it.length : Pos
 forall i . it.get(i) : [ . > it.length + it.get(it.length - 1 - i).length + j ]
+
 ```
 
 ### Dependency
