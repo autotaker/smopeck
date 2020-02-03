@@ -20,6 +20,7 @@ library
         Smopeck.Spec.Exp
         Smopeck.Spec.TypeExp
         Smopeck.Spec.Parser
+        Smopeck.Spec.Lattice
         Smopeck.Spec.Lexer
         Smopeck.Spec.Syntax
         Smopeck.Spec.Validator
