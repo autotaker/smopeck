@@ -1,12 +1,17 @@
+{-# LANGUAGE ConstraintKinds    #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
-{-# LANGUAGE KindSignatures     #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE TypeOperators      #-}
 module Smopeck.Spec.TypeExp where
 
+import           Data.Kind
 import qualified Data.Map              as M
+import           Data.Type.Bool
+import           Data.Type.Equality
 import           Smopeck.Mock.Location
 import           Smopeck.Spec.Exp
 import           Text.Read             hiding (Number, String)
@@ -18,6 +23,28 @@ data TypeExpF (mode :: Mode) (head :: HeadMode) =
         typeExpExt  :: TypeExtension mode,
         typeExpRef  :: TypeRefine mode
     }
+
+data LatticeMode = Full | Join | Meet
+
+type family MeetSupported (l :: LatticeMode) :: Constraint where
+    MeetSupported Full = ()
+    MeetSupported Meet = ()
+    MeetSupported _ = (True ~ False)
+type family JoinSupported (l :: LatticeMode) :: Constraint where
+    JoinSupported Full = ()
+    JoinSupported Join = ()
+    JoinSupported _ = (True ~ False)
+
+data Lattice (m :: LatticeMode) a where
+    LBot  :: MeetSupported m => Lattice m a
+    LElem :: a -> Lattice m a
+    LJoin :: JoinSupported m => Lattice m a -> Lattice m a -> Lattice m a
+    LMeet :: MeetSupported m => Lattice m a -> Lattice m a -> Lattice m a
+    LTop  :: JoinSupported m => Lattice m a
+
+
+-- type TypeExp mode head = Lattice Full (TypeExpF mode head)
+
 
 data TypeExp mode head where
     TypeExp :: TypeExpF mode head -> TypeExp mode head
