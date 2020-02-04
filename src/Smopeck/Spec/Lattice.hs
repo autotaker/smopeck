@@ -49,27 +49,28 @@ class Cata f where
 
 instance Cata (Lattice Join) where
     data CataF (Lattice Join) s a = CataJoin {
-        fBot :: s,
-        fElem :: a -> s,
-        fJoin :: s -> s -> s
+        fJBot :: s,
+        fJElem :: a -> s,
+        fJJoin :: s -> s -> s
     }
     cata g = go
         where
-            go LBot        = fBot g
-            go (LElem a)   = fElem g a
-            go (LJoin a b) = fJoin g (go a) (go b)
+            go LBot        = fJBot g
+            go (LElem a)   = fJElem g a
+            go (LJoin a b) = fJJoin g (go a) (go b)
 
 instance Cata (Lattice Meet) where
     data CataF (Lattice Meet) s a = CataMeet {
-        fTop :: s,
-        fElemM :: a -> s,
-        fMeet :: s -> s -> s
+        fMTop :: s,
+        fMElem :: a -> s,
+        fMMeet :: s -> s -> s
     }
     cata g = go
         where
-            go LTop        = fTop g
-            go (LElem a)   = fElemM g a
-            go (LMeet a b) = fMeet g (go a) (go b)
+            go LTop        = fMTop g
+            go (LElem a)   = fMElem g a
+            go (LMeet a b) = fMMeet g (go a) (go b)
+
 toJoinNormalForm :: Lattice m a -> Lattice Join (Lattice Meet a)
 toJoinNormalForm LBot = LBot
 toJoinNormalForm LTop = LElem LTop
@@ -92,5 +93,5 @@ toMeetNormalForm (LJoin a b) = do
     mb <- toMeetNormalForm b
     pure $ LJoin ma mb
 
-toFull :: Lattice m a -> Lattice Full a
-toFull = unsafeCoerce
+castFull :: Lattice m a -> Lattice Full a
+castFull = unsafeCoerce
