@@ -10,6 +10,7 @@
 module Smopeck.Spec.Lattice where
 import           Control.Monad
 import           Data.Kind
+import           Unsafe.Coerce
 
 data LatticeMode = Full | Join | Meet
 
@@ -42,6 +43,33 @@ instance Monad (Lattice m) where
     LJoin a b >>= f = LJoin (a >>= f) (b >>= f)
     LMeet a b >>= f = LMeet (a >>= f) (b >>= f)
 
+class Cata f where
+    data CataF f s a
+    cata :: CataF f s a -> f a -> s
+
+instance Cata (Lattice Join) where
+    data CataF (Lattice Join) s a = CataJoin {
+        fBot :: s,
+        fElem :: a -> s,
+        fJoin :: s -> s -> s
+    }
+    cata g = go
+        where
+            go LBot        = fBot g
+            go (LElem a)   = fElem g a
+            go (LJoin a b) = fJoin g (go a) (go b)
+
+instance Cata (Lattice Meet) where
+    data CataF (Lattice Meet) s a = CataMeet {
+        fTop :: s,
+        fElemM :: a -> s,
+        fMeet :: s -> s -> s
+    }
+    cata g = go
+        where
+            go LTop        = fTop g
+            go (LElem a)   = fElemM g a
+            go (LMeet a b) = fMeet g (go a) (go b)
 toJoinNormalForm :: Lattice m a -> Lattice Join (Lattice Meet a)
 toJoinNormalForm LBot = LBot
 toJoinNormalForm LTop = LElem LTop
@@ -64,3 +92,5 @@ toMeetNormalForm (LJoin a b) = do
     mb <- toMeetNormalForm b
     pure $ LJoin ma mb
 
+toFull :: Lattice m a -> Lattice Full a
+toFull = unsafeCoerce

@@ -3,6 +3,7 @@
 {-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# LANGUAGE TypeOperators      #-}
@@ -72,40 +73,49 @@ newtype Exp mode = Exp (ExpF mode (LocationF Root (Exp mode)))
 type TypeRefine mode = [ (RLocationF (Exp mode), Op, Exp mode)]
 
 evalTypeExp :: WHNFTypeEnv m -> TypeExp m HDefault -> TypeExp m WHNF
-evalTypeExp env (LElem TypeExpF{
-    typeExpName = Prim prim,
-    typeExpExt = ext,
-    typeExpRef = ref,
-    typeExpBind = bindName
-    }) = LElem TypeExpF{
-        typeExpName = Prim prim,
+evalTypeExp env tyExp =
+    fmap (cata g) (toJoinNormalForm (tyExp >>= eval)) >>= \case
+        Just x -> pure x
+        Nothing -> LBot
+    where
+    eval TypeExpF{
+            typeExpName = Prim prim,
+            typeExpExt = ext,
+            typeExpRef = ref,
+            typeExpBind = bindName
+        } = pure TypeExpF{
+                typeExpName = Prim prim,
+                typeExpExt = ext,
+                typeExpRef = ref,
+                typeExpBind = bindName
+            }
+    eval TypeExpF{
+        typeExpName = User userType,
         typeExpExt = ext,
         typeExpRef = ref,
         typeExpBind = bindName
-        }
-evalTypeExp env (LElem TypeExpF{
-    typeExpName = User userType,
-    typeExpExt = ext,
-    typeExpRef = ref,
-    typeExpBind = bindName
-    }) = extend bindName ext ref typeDef
-        where
-        typeDef = env M.! userType
-evalTypeExp env (LJoin ty1 ty2) =
-    LJoin (evalTypeExp env ty1) (evalTypeExp env ty2)
-evalTypeExp env (LMeet ty1 ty2) =
-    intersect (evalTypeExp env ty1) (evalTypeExp env ty2)
+        } = toFull $ fmap (extend bindName ext ref) typeDef
+            where
+            typeDef = env M.! userType
 
-extend :: VarName -> TypeExtension m -> TypeRefine m -> TypeExp m WHNF -> TypeExp m WHNF
+    g = CataMeet {
+        fTop = undefined,
+        fElemM = pure,
+        fMeet = \ma mb -> do
+            a <- ma
+            b <- mb
+            intersect' a b
+    }
+
+extend :: VarName -> TypeExtension m -> TypeRefine m -> TypeExpF m WHNF -> TypeExpF m WHNF
 extend bindName ext ref = go
     where
-    go (LJoin ty1 ty2)= LJoin (go ty1) (go ty2)
-    go (LElem TypeExpF{
+    go TypeExpF{
         typeExpName = typeName,
         typeExpBind = bindName0,
         typeExpExt = ext0,
         typeExpRef = ref0
-    }) = LElem TypeExpF {
+    } = TypeExpF {
             typeExpName = typeName,
             typeExpBind = bindName0,
             typeExpExt = extendTypeExt ext0 ext',
@@ -165,3 +175,18 @@ intersect (LElem ty1) (LElem ty2)
         ext2 = substTypeExt bindNameFrom bindNameTo (typeExpExt ty2)
         ref2 = substTypeRefine bindNameFrom bindNameTo (typeExpRef ty2)
 
+intersect' :: TypeExpF m WHNF -> TypeExpF m WHNF -> Maybe (TypeExpF m WHNF)
+intersect' ty1 ty2
+    | typeExpName ty1 /= typeExpName ty2 = Nothing
+    | typeExpName ty1 == typeExpName ty2 =
+        Just TypeExpF {
+            typeExpName = typeExpName ty1,
+            typeExpBind = typeExpBind ty1,
+            typeExpExt = M.unionWith LMeet (typeExpExt ty1) ext2,
+            typeExpRef = typeExpRef ty1 ++ ref2
+        }
+    where
+        bindNameFrom = typeExpBind ty2
+        bindNameTo = typeExpBind ty1
+        ext2 = substTypeExt bindNameFrom bindNameTo (typeExpExt ty2)
+        ref2 = substTypeRefine bindNameFrom bindNameTo (typeExpRef ty2)
