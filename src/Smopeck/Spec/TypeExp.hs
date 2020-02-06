@@ -69,8 +69,8 @@ data Primitive = PObject | PString | PNumber | PArray | PBool | PNull
     deriving(Eq,Ord,Show)
 type TypeExtension mode = M.Map FieldName (TypeExp mode HDefault)
 
-newtype Exp mode = Exp (ExpF mode (LocationF Root (Exp mode)))
-
+newtype Exp mode = Exp (ExpF mode (LocationExp mode))
+type LocationExp mode = LocationF Root (Exp mode)
 type TypeRefine mode = [ (RLocationF (Exp mode), Op, Exp mode)]
 
 evalTypeExp :: WHNFTypeEnv m -> TypeExp m HDefault -> TypeExp m WHNF
