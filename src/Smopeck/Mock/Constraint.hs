@@ -65,17 +65,12 @@ solveConstraint assign CType{..} = do
             Right (LNumber v) -> v
             v -> error $ "expected number but found:" ++ show v
           evalLocation :: ExpF Desugar (T.LocationExp Desugar) -> ExpF Desugar Location
-          evalLocation = fmap evalLocationExp
-          evalLocationExp :: T.LocationExp Desugar -> Location
-          evalLocationExp = fmap evalIndex
-          evalIndex :: T.Exp Desugar -> Int
-          evalIndex e =
+          evalLocation = fmap $ fmap $ \(T.Exp e) ->
             case eval ctx (evalLocation e) of
-              Left l | Just (VNumber v) <- M.lookup l assign -> floor l
+              Left l | Just (VNumber v) <- M.lookup l assign -> floor v
               Right (LNumber l) -> floor l
               l -> error $ "expected number but found:" ++ show l
-
-      let ePredicates = fmap (fmap (\(op, e) -> (op, evalNumber e))) cPredicates
+      let ePredicates = fmap (fmap (\(op, T.Exp e) -> (op, evalNumber e))) cPredicates
       v <- generateNumber ePredicates
       pure (VNumber v, [], [])
 
