@@ -4,6 +4,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Smopeck.Mock.Constraint where
 
+import           Data.Bifunctor
+import           Data.Function
 import qualified Data.Map                as M
 import           Data.Scientific
 import           Smopeck.Mock.Dependency
@@ -24,13 +26,12 @@ type TypeExpF = T.TypeExpF Desugar T.WHNF
 type Assertion = Exp
 type Predicate = (Op, Exp)
 
-type DNF a = Lattice Join (Lattice Meet a)
 
 data Constraint =
     CType {
         cLocation   :: !Location,
         cShape      :: !TypeExp,
-        cPredicates :: !(DNF Predicate),
+        cPredicates :: !(Lattice Full Predicate),
         cAssertion  :: !Assertion
       }
     | CRange {
@@ -42,7 +43,7 @@ data Constraint =
 
 type SolveM a = IO a
 
-generateNumber :: DNF (Op, Scientific) -> SolveM Scientific
+generateNumber :: Lattice Full (Op, Scientific) -> SolveM Scientific
 generateNumber _ = pure 0
 
 chooseShape :: TypeExp -> SolveM TypeExpF
@@ -60,17 +61,19 @@ solveConstraint assign CType{..} = do
   ty <- chooseShape cShape
   case T.typeExpName ty of
     T.Prim T.PNumber -> do
-      let evalNumber e = case eval ctx (evalLocation e) of
+      let evalNumber :: Exp -> Scientific
+          evalNumber e = case eval ctx (evalLocation e) of
             Left l | Just (VNumber v) <- M.lookup l assign -> v
             Right (LNumber v) -> v
             v -> error $ "expected number but found:" ++ show v
-          evalLocation :: ExpF Desugar (T.LocationExp Desugar) -> ExpF Desugar Location
-          evalLocation = fmap $ fmap $ \(T.Exp e) ->
-            case eval ctx (evalLocation e) of
-              Left l | Just (VNumber v) <- M.lookup l assign -> floor v
-              Right (LNumber l) -> floor l
-              l -> error $ "expected number but found:" ++ show l
-      let ePredicates = fmap (fmap (\(op, T.Exp e) -> (op, evalNumber e))) cPredicates
+          evalLocation :: Exp -> ExpF Desugar Location
+          evalLocation (T.Exp e) = fmap (fmap (floor . evalNumber)) e
+      let predicates =
+              T.typeExpRef ty
+                & filter (\case { (Root (), _, _) -> True; _ -> False})
+                & map (\(_, op, e) -> LElem (op, evalNumber e))
+                & foldr LMeet ePredicates
+          ePredicates = fmap (second evalNumber) cPredicates
       v <- generateNumber ePredicates
       pure (VNumber v, [], [])
 
