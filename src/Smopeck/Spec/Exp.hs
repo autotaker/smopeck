@@ -6,6 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Smopeck.Spec.Exp(
     eval,
+    locations,
     ExpF(..),
     Literal(..),
     Mode(..),
@@ -13,6 +14,7 @@ module Smopeck.Spec.Exp(
 import           Control.Monad
 import qualified Data.Map        as M
 import           Data.Scientific
+import qualified Data.Set        as S
 
 data ExpF (mode :: Mode) a = Literal !(Literal mode) | Var !a | App !Op [ExpF mode a]
     deriving (Functor)
@@ -67,6 +69,11 @@ eval env = go
         Just l  -> l
         Nothing -> error $ "failed to dereference:" ++ show x
     deref (Right l) = l
+
+locations :: (Eq a, Ord a, Show a) => ExpF m a -> S.Set a
+locations (Literal _)  = S.empty
+locations (Var x)      = S.singleton  x
+locations (App _ args) = S.unions (map locations args)
 
 interpret :: Op -> [Literal Desugar] -> Literal Desugar
 interpret Add [LNumber x, LNumber y] = LNumber $ x + y

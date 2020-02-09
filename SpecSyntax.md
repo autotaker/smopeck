@@ -28,11 +28,9 @@
 
 <Literal> ::= <DQStringLiteral> | <SQStringLiteral> | <BooleanLiteral> | <NumberLiteral> | <RegexLiteral>
 <RefineList> ::= <RefineExp> (',' <RefineExp>)*
-<RefineExp> ::= <RefineAtom> 
-              | <RefineExp> '=' <RefineExp>
-              | <RefineExp> '=~' <RegexLiteral>
-<RefineAtom> ::= '.' | ('.' <Accessor>)+ | <RefineVar>('.' <Accessor>)* | <Literal>
-<Accessor> ::= (<TypeName> '#')? <BindingKey>
+<RefineExp> ::= '.' <CompOp> <Exp>
+<RefineAtom> ::= <RefineVar>('.' <Accessor>)* | <Literal>
+<Accessor> ::= (<TypeName> '#')? <BindingKey> | 'get(' <Exp> ')'
 ```
 
 ### Endpoint Definition

@@ -70,6 +70,10 @@ data Primitive = PObject | PString | PNumber | PArray | PBool | PNull
 type TypeExtension mode = M.Map FieldName (TypeExp mode HDefault)
 
 newtype Exp mode = Exp (ExpF mode (LocationExp mode))
+
+deriving instance Eq (Exp Desugar)
+deriving instance Ord (Exp Desugar)
+deriving instance Show (Exp Desugar)
 type LocationExp mode = LocationF Root (Exp mode)
 type TypeRefine mode = [ (RLocationF (Exp mode), Op, Exp mode)]
 

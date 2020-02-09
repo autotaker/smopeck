@@ -8,6 +8,7 @@ import           Data.Bifunctor
 import           Data.Function
 import qualified Data.Map                as M
 import           Data.Scientific
+import qualified Data.Set                as S
 import           Smopeck.Mock.Dependency
 import           Smopeck.Mock.Location
 import           Smopeck.Mock.Value
@@ -26,21 +27,22 @@ type TypeExpF = T.TypeExpF Desugar T.WHNF
 type TypeEnv = T.WHNFTypeEnv Desugar
 type Assertion = Exp
 type Predicate = (Op, Exp)
+type LocationExp = T.LocationExp Desugar
 
 
 data Constraint =
     CType {
-        cLocation   :: !Location,
-        cShape      :: !TypeExp,
-        cPredicates :: !(Lattice Full Predicate),
-        cAssertion  :: !Assertion
+        cLocation  :: !Location,
+        cShape     :: !TypeExp,
+        cAssertion :: !Assertion
       }
     | CRange {
         cLocation     :: !Location,
         cRange        :: !RangeExp,
-        cBodyLocation :: !(T.LocationExp Desugar),
+        cBodyLocation :: !LocationExp,
         cBodyType     :: !TypeExp
       }
+
 
 type SolveM a = IO a
 
@@ -73,9 +75,8 @@ solveConstraint env assign CType{..} = do
               T.typeExpRef ty
                 & filter (\case { (Root (), _, _) -> True; _ -> False})
                 & map (\(_, op, e) -> LElem (op, evalNumber e))
-                & foldr LMeet ePredicates
-          ePredicates = fmap (second evalNumber) cPredicates
-      v <- generateNumber ePredicates
+                & foldr LMeet LTop
+      v <- generateNumber predicates
       pure (VNumber v, [], [])
     T.Prim T.PObject -> do
       let exts = T.typeExpExt ty
@@ -85,12 +86,31 @@ solveConstraint env assign CType{..} = do
             CType {
               cLocation = cLocation `Field` field,
               cShape = T.evalTypeExp env tyExp,
-              cPredicates = LBot,
               cAssertion = T.Exp (Literal (LBool True))
             })
+          depVars = do
+            CType{cShape = tyExp} <- cs
+            let shape =
+                  tyExp
+                  & fmap (\ x -> S.unions $ do
+                      (_, _, T.Exp e) <- T.typeExpRef x
+                      pure (locations e))
+                  & cata CataJoin{
+                      fJBot = S.empty,
+                      fJElem = id,
+                      fJJoin = S.union
+                    }
+                  & S.toList
+                  & concatMap decompDep
+                  & S.fromList
+            pure ()
+
+
       pure (VObject fields, cs, [])
 
 
+decompDep :: LocationExp -> [LocationBlob]
+decompDep = undefined
 
 
 

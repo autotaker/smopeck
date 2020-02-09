@@ -8,6 +8,7 @@ data LocationF root a =
     deriving (Eq, Ord, Show, Functor)
 
 data Blob = BlobAny | BlobInt Int
+    deriving(Eq, Ord, Show)
 type LocationBlob = LocationF Root Blob
 type Location = LocationF Root Int
 
