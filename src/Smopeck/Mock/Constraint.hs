@@ -103,6 +103,7 @@ solveConstraint env assign CType{..} = do
                   & S.toList
                   & concatMap decompDep
                   & S.fromList
+                  & S.toList
             pure ()
 
 
