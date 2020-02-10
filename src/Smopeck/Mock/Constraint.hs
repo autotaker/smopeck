@@ -2,10 +2,13 @@
 {-# LANGUAGE DeriveFunctor   #-}
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections   #-}
 module Smopeck.Mock.Constraint where
 
+import           Control.Monad.Reader
 import           Data.Bifunctor
 import           Data.Function
+import qualified Data.HashTable.IO       as H
 import qualified Data.Map                as M
 import           Data.Scientific
 import qualified Data.Set                as S
@@ -44,13 +47,77 @@ data Constraint =
       }
 
 
-type SolveM a = IO a
+type HashTable k v = H.BasicHashTable k v
+type SolveM a = ReaderT Context IO a
+
+data Context = Context {
+  assignment :: HashTable Location (Either TypeExp Value),
+  typeEnv    :: TypeEnv
+}
 
 generateNumber :: Lattice Full (Op, Scientific) -> SolveM Scientific
 generateNumber _ = pure 0
 
 chooseShape :: TypeExp -> SolveM TypeExpF
 chooseShape _ = pure undefined
+
+evalL :: Location -> SolveM Value
+evalL loc = do
+  tbl <- asks assignment
+  liftIO (H.lookup tbl loc) >>= \case
+    Just (Right v) -> pure v
+    Just (Left ty) -> do
+      v <- evalT loc ty
+      liftIO (H.insert tbl loc (Right v))
+      pure v
+    Nothing -> do
+      evalL (parent loc)
+      evalL loc
+
+evalT :: Location -> TypeExp -> SolveM Value
+evalT loc ty = do
+  tyF <- chooseShape ty
+  case T.typeExpName tyF of
+    T.Prim T.PNumber -> do
+      predicates <-
+        T.typeExpRef tyF
+          & filter (\case { (Root (), _, _) -> True; _ -> False})
+          & mapM (\(_, op, e) -> LElem . (op, ) <$> evalNumber e)
+      v <- generateNumber (foldr LMeet LTop predicates)
+      pure (VNumber v)
+    T.Prim T.PObject -> do
+      let exts = T.typeExpExt tyF
+          fields = M.keysSet exts
+      forM_ (M.toList exts) $ \(field, tyExp) -> do
+        env <- asks typeEnv
+        let tyExp' = T.evalTypeExp env tyExp
+            loc' = loc `Field` field
+        tbl <- asks assignment
+        liftIO (H.insert tbl loc' (Left tyExp'))
+      pure (VObject fields)
+    T.Prim T.PArray -> do
+      env <- asks typeEnv
+      let exts = T.typeExpExt tyF
+          lenTy = T.evalTypeExp env (exts M.! "length")
+          lenLoc = loc `Field` "length"
+      VNumber len <- evalT (loc `Field` "length") lenTy
+      tbl <- asks assignment
+      liftIO (H.insert tbl lenLoc (Right (VNumber len)))
+      forM_ [0..floor len - 1] $ \i -> do
+        let getTy = T.evalTypeExp env (exts M.! "get")
+            getLoc = loc `Get` i
+        liftIO (H.insert tbl getLoc (Left getTy))
+      pure VArray
+
+
+evalNumber :: Exp -> SolveM Scientific
+evalNumber e = undefined
+
+
+parent :: Location -> Location
+parent (p `Get` _)   = p
+parent (p `Field` _) = p
+parent (Root _)      = error "no parent for root"
 
 solveConstraint :: TypeEnv -> Assignment -> Constraint -> SolveM (Value, [Constraint], [DepEdge])
 solveConstraint env assign CType{..} = do

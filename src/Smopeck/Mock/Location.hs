@@ -1,11 +1,18 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Smopeck.Mock.Location where
+
+import           Data.Hashable
+import           GHC.Generics
 
 data LocationF root a =
     Root root
     | Field (LocationF root a) FieldName
     | Get (LocationF root a) a
-    deriving (Eq, Ord, Show, Functor)
+    deriving (Eq, Ord, Show, Functor, Generic)
+
+instance (Hashable root, Hashable a) => Hashable (LocationF root a)
+instance Hashable Root
 
 data Blob = BlobAny | BlobInt Int
     deriving(Eq, Ord, Show)
@@ -13,7 +20,7 @@ type LocationBlob = LocationF Root Blob
 type Location = LocationF Root Int
 
 data Root = Relative | Absolute String
-    deriving(Eq, Ord, Show)
+    deriving(Eq, Ord, Show, Generic)
 type FieldName = String
 type RLocationF a = LocationF () a
 

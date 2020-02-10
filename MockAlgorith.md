@@ -587,84 +587,170 @@ assignments:
 ```
 type Size = Int [ . > 1 ]
 type Pos = Int [ . > 0 ]
-type Example = Array {
+type PosArray = Array { length: Size, get(j): Pos }
+type Example = Array@a {
   length: Size,
-  get(i): Array {
-    length: Size
-    get(j): Pos
-  }  
-} [ .get(0) = .get(1) ]
+  get(i) 
+    | i == 0 : PosArray [ . = a.get(1) ]
+    | otherwise : PosArray
+} 
 ```
 
 ```
-it : Example {..} [ .get(0) = .get(1) ]
+it : Example {..}
 ```
 
 ```
-it = Array
+assignments:
+ - it := Array
 
-it.length : Size
-forall i in range(0,it.length). it.get(i) : Array {..} 
-it.get(0) = it.get(1)
-```
+constraints:
+- it.length : Size
+- forall i in range(0,it.length). it.get(i) : Array {..} 
 
-```
-i -> it.get(*)
-it.get(1) -> it.get(0)
-```
-
-```
-it.length = 2
-
-forall i in range(0,it.length). it.get(i) : Array {..} 
-it.get(0) = it.get(1)
+dependency:
+- it.length -> i
 ```
 
 ```
-it.get(0) : Array {..}
-it.get(1) : Array {..}
-it.get(0) = it.get(1)
+assignments:
+- it := Array
+- it.length := 2
+
+constraints:
+- forall i in range(0, it.length). it.get(i) : ....
+
+dependency:
 ```
 
 ```
-it.get(1) = Array
+assignments:
+- it := Array
+- it.length := 2
 
+constraints:
+it.get(0) : PosArray [ . = it.get(1) ]
+it.get(1) : PosArray
+
+dependency:
+it.get(0) <-  it.get(1)
+```
+
+```
+assignments:
+- it := Array
+- it.length := 2
+- it.get(0) := Array
+- it.get(1) := Array
+
+constraints:
+it.get(0).length : Size [ . = it.get(1).length ]
+forall j in range(0,it.get(0).length). it.get(0).get(j) : 
+  Pos [ . = it.get(1).get(j) ]
 it.get(1).length : Size
-forall j in range(0, it.get(1).length). it.get(1).get(j) : Pos
-it.get(0) = it.get(1)
-it.get(0) : Array {..}
+forall k in range(0,it.get(1).length). it.get(1).get(j) : Pos
+
+dependency:
+it.get(0).length <-  it.get(1).length
+j <- it.get(0).length
+k <- it.get(1).length
 ```
 
 ```
-it.get(1).length = 2
+assignments:
+- it := Array
+- it.length := 2
+- it.get(0) := Array
+- it.get(1) := Array
+
+constraints:
+it.get(0).length : Size [ . = it.get(1).length ]
+forall j in range(0,it.get(0).length). it.get(0).get(j) : 
+  Pos [ . = it.get(1).get(j) ]
+it.get(1).length : Size
+forall k in range(0,it.get(1).length). it.get(1).get(j) : Pos
+
+dependency:
+it.get(0).length <-  it.get(1).length
+j <- it.get(0).length
+k <- it.get(1).length
+```
+
+```
+assignments:
+- it := Array
+- it.length := 2
+- it.get(0) := Array
+- it.get(1) := Array
+- it.get(1).length = 2
+
+constraints:
+it.get(0).length : Size [ . = it.get(1).length ]
+forall j in range(0,it.get(0).length). it.get(0).get(j) : 
+  Pos [ . = it.get(1).get(j) ]
+forall k in range(0,it.get(1).length). it.get(1).get(j) : Pos
+
+dependency:
+j <- it.get(0).length
+k <- it.get(1).length
+```
+
+
+```
+assignments:
+- it := Array
+- it.length := 2
+- it.get(0) := Array
+- it.get(1) := Array
+- it.get(1).length = 2
+- it.get(0).length = 2
+
+constraints:
+forall j in range(0,it.get(0).length). it.get(0).get(j) : 
+  Pos [ . = it.get(1).get(j) ]
+forall k in range(0,it.get(1).length). it.get(1).get(j) : Pos
+
+dependency:
+j <- it.get(0).length
+k <- it.get(1).length
+```
+
+```
+assignments:
+- it := Array
+- it.length := 2
+- it.get(0) := Array
+- it.get(1) := Array
+- it.get(1).length = 2
+- it.get(0).length = 2
+
+constraints:
+it.get(0).get(0) : Pos [ . = it.get(1).get(0) ]
+it.get(0).get(1) : Pos [ . = it.get(1).get(1) ]
 it.get(1).get(0) : Pos
 it.get(1).get(1) : Pos
-it.get(0) = it.get(1)
-it.get(0) : Array {..}
-it.get(1) : Array {..}
+
+dependency:
+it.get(0).get(0) <- it.get(1).get(0)
+it.get(0).get(1) <- it.get(1).get(1)
 ```
 
 ```
-it.get(1).get(0) = 1
-it.get(1).get(1) = 2
-it.get(0) : Array {..}
-it.get(0) = it.get(1)
+assignments:
+- it := Array
+- it.length := 2
+- it.get(0) := Array
+- it.get(1) := Array
+- it.get(1).length = 2
+- it.get(0).length = 2
+- it.get(1).get(0) = 1
+- it.get(1).get(1) = 2
+- it.get(0).get(0) = 1
+- it.get(0).get(1) = 2
 ```
 
-```
-it.get(0).length = it.get(1).length
-it.get(0).length : Size
-it.get(0).get(j) = Size [ . = it.get(1).get(j) ]
-it.get(0).get(j) : Pos
-```
+extract value
 
 ```
-it.get(0).get(0) : Pos [. = it.get(1).get(0)]
-it.get(0).get(1) : Pos
+it = [[1, 2], [1, 2]]
 ```
-
-```
-it.get(0).get(0) = 1
-it.get(1).length = 2
-it.get(1).get(j) : Size
-
