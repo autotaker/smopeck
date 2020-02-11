@@ -4,6 +4,7 @@
 module Smopeck.Mock.Constraint where
 
 import           Control.Monad.Reader
+import qualified Data.Aeson              as JSON
 import           Data.Bifunctor
 import           Data.Foldable
 import           Data.Function
@@ -11,6 +12,7 @@ import qualified Data.HashTable.IO       as H
 import qualified Data.Map                as M
 import           Data.Scientific
 import qualified Data.Set                as S
+import qualified Data.Text               as T
 import           Smopeck.Mock.Dependency
 import           Smopeck.Mock.Location
 import           Smopeck.Mock.Value
@@ -38,7 +40,7 @@ data Context = Context {
 }
 
 initContext :: TypeEnv -> IO Context
-initContext env = Context <$> H.new <*> pure env <*> create
+initContext env = Context <$> H.new <*> pure env <*> createSystemRandom
 
 generateNumber :: Lattice Full (Op, Scientific) -> SolveM Scientific
 generateNumber _ = do
@@ -53,6 +55,35 @@ chooseShape ty = do
   let cands = toList ty
   idx <- uniformR (0, length cands - 1) gen
   pure $ cands !! idx
+
+
+extract :: Location -> SolveM JSON.Value
+extract loc = evalL loc >>= \case
+  VBool b -> pure $ JSON.Bool  b
+  VNumber n -> pure $ JSON.Number n
+  VNull -> pure $ JSON.Null
+  VString s -> pure $ JSON.toJSON s
+  VObject fields -> do
+    pairs <- mapM (\f -> do
+      v <- extract (loc `Field` f)
+      pure $ T.pack f JSON..= v) $ S.toList fields
+    pure $ JSON.object pairs
+  VArray -> do
+    JSON.Number len <- extract $ loc `Field` "length"
+    es <- forM [0..floor len - 1] $ extract . (Get loc)
+    pure $ JSON.toJSON es
+
+mockJson :: TypeEnv -> TypeExp -> IO JSON.Value
+mockJson env ty = do
+  ctx <- initContext env
+  runReaderT doit ctx
+    where
+      root = Root (Absolute "it")
+      doit = do
+        tbl <- asks assignment
+        liftIO $ H.insert tbl root (Left ty)
+        extract root
+
 
 evalL :: Location -> SolveM Value
 evalL loc = do

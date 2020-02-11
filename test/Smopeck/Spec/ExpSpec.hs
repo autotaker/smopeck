@@ -1,10 +1,11 @@
+{-# LANGUAGE DataKinds #-}
 module Smopeck.Spec.ExpSpec where
 
 import qualified Data.Map         as M
 import           Smopeck.Spec.Exp
 import           Test.Hspec
 
-type Exp = ExpF String
+type Exp = ExpF 'Desugar String
 
 spec :: Spec
 spec =

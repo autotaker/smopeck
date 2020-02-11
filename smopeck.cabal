@@ -74,6 +74,7 @@ test-suite unit-test
         Smopeck.Spec.ValidatorSpec
         Smopeck.Mock.LocationSpec
         Smopeck.Mock.DependencySpec
+        Smopeck.Mock.ConstraintSpec
     default-language: Haskell2010
     ghc-options: -Wall
     build-depends:
@@ -83,4 +84,5 @@ test-suite unit-test
         mtl -any,
         containers -any,
         smopeck -any,
+        hashtables -any,
         aeson -any
