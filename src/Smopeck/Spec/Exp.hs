@@ -7,6 +7,7 @@
 module Smopeck.Spec.Exp(
     eval,
     locations,
+    interpret,
     ExpF(..),
     Literal(..),
     Mode(..),

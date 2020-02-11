@@ -111,7 +111,36 @@ evalT loc ty = do
 
 
 evalNumber :: Exp -> SolveM Scientific
-evalNumber e = undefined
+evalNumber e = toNumber <$> (evalExp e >>= deref)
+
+deref :: Either Location (Literal Desugar) -> SolveM (Literal Desugar)
+deref (Right l) = pure l
+deref (Left x)  = toLiteral <$> evalL x
+
+evalExp :: Exp -> SolveM (Either Location (Literal Desugar))
+evalExp (T.Exp e) = go e
+  where
+  go (Literal l)   = pure (Right l)
+  go (Var x)       = Left <$> traverse (fmap floor . evalNumber) x
+  go (App op args) = Right . interpret op <$> mapM f args
+    where
+      f e = go e >>= \case
+        Right l -> pure l
+        Left x -> toLiteral <$> evalL x
+
+toLiteral :: Value -> Literal Desugar
+toLiteral (VBool b)   = LBool b
+toLiteral (VNumber n) = LNumber n
+toLiteral VNull       = LNull
+toLiteral (VString s) = LString s
+toLiteral (VObject _) = error "cannot convert object to literal"
+toLiteral VArray      = error "cannot convert array to literal"
+
+toNumber :: Literal m -> Scientific
+toNumber (LNumber n) = n
+toNumber _           = error "cannot convert to number"
+
+
 
 
 parent :: Location -> Location
