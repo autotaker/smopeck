@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds    #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveTraversable  #-}
 {-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
@@ -31,6 +32,8 @@ data Lattice (m :: LatticeMode) a where
     LTop  :: MeetSupported m => Lattice m a
 
 deriving instance Functor (Lattice m)
+deriving instance Foldable (Lattice m)
+deriving instance Traversable (Lattice m)
 
 instance Applicative (Lattice m) where
     pure = LElem
