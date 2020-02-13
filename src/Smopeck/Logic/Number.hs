@@ -52,7 +52,7 @@ instance Model Double where
     join x y = RangeAreaD (joinArea (coerce x) (coerce y))
     meet x y = RangeAreaD (meetArea (coerce x) (coerce y))
     generate st xs = generateArea st eps (coerce xs)
-        where eps x = x * 1e-53
+        where eps x = abs x * 1e-53
 
 instance Model Int where
     newtype Atom Int = RangeAreaI [Range Int]
@@ -64,18 +64,20 @@ instance Model Int where
         where eps x = 1
 
 
-nonEmpty :: Ord a => LeftEnd a -> RightEnd a -> Bool
-nonEmpty (LeftEnd b) (RightEnd a) =
+nullRange :: Ord a => Range a -> Bool
+nullRange (Range (LeftEnd a) (RightEnd b)) =
     case (a, b) of
-        (Open, _)                  -> True
-        (_, Open)                  -> True
-        (Inclusive a, Inclusive b) -> a >= b
-        (Inclusive a, Exclusive b) -> a > b
-        (Exclusive a, Inclusive b) -> a > b
-        (Exclusive a, Exclusive b) -> a > b
+        (Open, _)                  -> False
+        (_, Open)                  -> False
+        (Inclusive a, Inclusive b) -> a > b
+        (Inclusive a, Exclusive b) -> a >= b
+        (Exclusive a, Inclusive b) -> a >= b
+        (Exclusive a, Exclusive b) -> a >= b
 
 intersect :: Ord a => Range a -> Range a -> Bool
-intersect (Range l1 r1) (Range l2 r2) = nonEmpty l2 r1 && nonEmpty l1 r2
+intersect (Range l1 r1) (Range l2 r2) =
+    not (nullRange (Range l2 r1)) &&
+    not (nullRange (Range l1 r2))
 
 joinRange :: Ord a => Range a -> Range a -> Range a
 joinRange (Range l1 r1) (Range l2 r2) = Range (min l1 l2) (max r1 r2)
