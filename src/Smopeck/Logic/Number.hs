@@ -21,7 +21,7 @@ instance Model Scientific where
     newtype Atom Scientific = RangeArea [Range Scientific]
     top = RangeArea [Range Open Open]
     bot = RangeArea []
-    join = undefined
+    join (RangeArea x) (RangeArea y) = RangeArea (joinArea x y)
     meet = undefined
     generate = undefined
 
@@ -50,7 +50,7 @@ joinRange (Range l1 r1) (Range l2 r2) = Range (minEnd l1 l2) (maxEnd r1 r2)
         | otherwise = Exclusive b
     minEnd (Exclusive b) (Inclusive a)
         | a <= b = Inclusive a
-        | otherwise = Exclusive a
+        | otherwise = Exclusive b
     maxEnd Open _ = Open
     maxEnd _ Open = Open
     maxEnd (Inclusive a) (Inclusive b) = Inclusive (max a b)
@@ -60,7 +60,31 @@ joinRange (Range l1 r1) (Range l2 r2) = Range (minEnd l1 l2) (maxEnd r1 r2)
         | otherwise = Exclusive b
     maxEnd (Exclusive b) (Inclusive a)
         | a >= b = Inclusive a
-        | otherwise = Exclusive a
+        | otherwise = Exclusive b
+
+meetRange :: Ord a => Range a -> Range a -> Range a
+meetRange (Range l1 r1) (Range l2 r2) = Range (minEnd l1 l2) (maxEnd r1 r2)
+    where
+    minEnd Open y = y
+    minEnd x Open = x
+    minEnd (Inclusive a) (Inclusive b) = Inclusive (max a b)
+    minEnd (Exclusive a) (Exclusive b) = Exclusive (max a b)
+    minEnd (Inclusive a) (Exclusive b)
+        | a <= b = Exclusive b
+        | otherwise = Inclusive a
+    minEnd (Exclusive b) (Inclusive a)
+        | a <= b = Exclusive b
+        | otherwise = Inclusive a
+    maxEnd Open y = y
+    maxEnd x Open = x
+    maxEnd (Inclusive a) (Inclusive b) = Inclusive (min a b)
+    maxEnd (Exclusive a) (Exclusive b) = Exclusive (min a b)
+    maxEnd (Inclusive a) (Exclusive b)
+        | a >= b = Exclusive b
+        | otherwise = Inclusive a
+    maxEnd (Exclusive b) (Inclusive a)
+        | a >= b = Exclusive b
+        | otherwise = Inclusive a
 
 
 joinArea :: Ord a => RangeArea a -> RangeArea a -> RangeArea a
@@ -70,6 +94,7 @@ joinArea (x:xs) (y:ys)
     | intersect x y = joinArea (joinRange x y:xs) ys
     | leftEnd x `isLeftOf` leftEnd y = x : joinArea xs (y:ys)
     | otherwise = y : joinArea (x:xs) ys
+
 
 isLeftOf :: Ord a => End a -> End a -> Bool
 isLeftOf Open _                      = True
