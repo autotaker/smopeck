@@ -104,7 +104,7 @@ meetArea (x:xs) (y:ys)
             | rightEnd x <= rightEnd y = (xs, y:ys)
             | otherwise = (x:xs, ys)
 
-generateArea :: (Variate a, Num a, PrimMonad f) => Gen (PrimState f) -> (a -> a) -> RangeArea a -> f (Maybe a)
+generateArea :: (Variate a, Num a, Ord a, PrimMonad f) => Gen (PrimState f) -> (a -> a) -> RangeArea a -> f (Maybe a)
 generateArea st eps [] = pure Nothing
 generateArea st eps xs = do
     let n = length xs
@@ -121,4 +121,6 @@ generateArea st eps xs = do
         (Nothing, Nothing) -> Just <$> uniformR (-100, 100) st
         (Just a, Nothing)  -> Just <$> uniformR (a , a + 100) st
         (Nothing, Just a)  -> Just <$> uniformR (a - 100, a) st
-        (Just a, Just b)   -> Just <$> uniformR (a, b) st
+        (Just a, Just b)
+            | nullRange (Range (LeftEnd $ Inclusive a) (RightEnd $ Inclusive b))  -> pure Nothing
+            | otherwise -> Just <$> uniformR (a, b) st
