@@ -58,11 +58,28 @@ generateNumber lat = do
           d = case toBoundedRealFloat v of
             Left b  -> b
             Right b -> b
-
   gen <- asks randState
   r <- generate gen g
   case r of
     Just v  -> pure $ fromFloatDigits v
+    Nothing -> error "no such value"
+
+generateInt :: Lattice Full (Op, Scientific) -> SolveM Scientific
+generateInt lat = do
+  let g = cata CataFull{
+            fFBot = bot,
+            fFTop = top,
+            fFJoin = join,
+            fFMeet = meet,
+            fFElem = toRange
+          } lat
+      toRange (op, v) = RangeAreaI (interpretRange op d)
+        where
+          d = floor v
+  gen <- asks randState
+  r <- generate gen g
+  case r of
+    Just v  -> pure $ fromIntegral v
     Nothing -> error "no such value"
 
 
@@ -125,6 +142,13 @@ evalT loc ty = do
           & filter (\case { (Root (), _, _) -> True; _ -> False})
           & mapM (\(_, op, e) -> LElem . (op, ) <$> evalNumber e)
       v <- generateNumber (foldr LMeet LTop predicates)
+      pure (VNumber v)
+    T.Prim T.PInt -> do
+      predicates <-
+        T.typeExpRef tyF
+          & filter (\case { (Root (), _, _) -> True; _ -> False})
+          & mapM (\(_, op, e) -> LElem . (op, ) <$> evalNumber e)
+      v <- generateInt (foldr LMeet LTop predicates)
       pure (VNumber v)
     T.Prim T.PObject -> do
       let exts = T.typeExpExt tyF

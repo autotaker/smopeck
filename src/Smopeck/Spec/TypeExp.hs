@@ -65,7 +65,7 @@ type UserType = String
 
 type DefaultTypeEnv m = M.Map UserType (TypeExp m HDefault)
 type WHNFTypeEnv m = M.Map UserType (TypeExp m WHNF)
-data Primitive = PObject | PString | PNumber | PArray | PBool | PNull
+data Primitive = PObject | PString | PNumber | PInt | PArray | PBool | PNull
     deriving(Eq,Ord,Show)
 type TypeExtension mode = M.Map FieldName (TypeExp mode HDefault)
 
