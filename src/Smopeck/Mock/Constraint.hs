@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 module Smopeck.Mock.Constraint where
 
-import           Control.Monad.Reader
+import           Control.Monad.Reader    hiding (join)
 import qualified Data.Aeson              as JSON
 import           Data.Bifunctor
 import           Data.Foldable
@@ -13,6 +13,8 @@ import qualified Data.Map                as M
 import           Data.Scientific
 import qualified Data.Set                as S
 import qualified Data.Text               as T
+import           Smopeck.Logic.Model
+import           Smopeck.Logic.Number
 import           Smopeck.Mock.Dependency
 import           Smopeck.Mock.Location
 import           Smopeck.Mock.Value
@@ -43,10 +45,25 @@ initContext :: TypeEnv -> IO Context
 initContext env = Context <$> H.new <*> pure env <*> createSystemRandom
 
 generateNumber :: Lattice Full (Op, Scientific) -> SolveM Scientific
-generateNumber _ = do
+generateNumber lat = do
+  let g = cata CataFull{
+            fFBot = bot,
+            fFTop = top,
+            fFJoin = join,
+            fFMeet = meet,
+            fFElem = toRange
+          } lat
+      toRange (op, v) = RangeAreaD (interpretRange op d)
+        where
+          d = case toBoundedRealFloat v of
+            Left b  -> b
+            Right b -> b
+
   gen <- asks randState
-  d <- uniformR (0, 10) gen :: SolveM Int
-  pure $ fromIntegral d
+  r <- generate gen g
+  case r of
+    Just v  -> pure $ fromFloatDigits v
+    Nothing -> error "no such value"
 
 
 chooseShape :: TypeExp -> SolveM TypeExpF

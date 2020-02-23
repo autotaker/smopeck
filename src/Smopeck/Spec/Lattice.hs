@@ -74,6 +74,23 @@ instance Cata (Lattice Meet) where
             go (LElem a)   = fMElem g a
             go (LMeet a b) = fMMeet g (go a) (go b)
 
+instance Cata (Lattice Full) where
+    data CataF (Lattice Full) s a = CataFull {
+        fFTop :: s,
+        fFBot :: s,
+        fFElem :: a -> s,
+        fFMeet :: s -> s -> s,
+        fFJoin :: s -> s -> s
+    }
+    cata g = go
+        where
+            go LTop        = fFTop g
+            go LBot        = fFBot g
+            go (LElem a)   = fFElem g a
+            go (LMeet a b) = fFMeet g (go a) (go b)
+            go (LJoin a b) = fFJoin g (go a) (go b)
+
+
 toJoinNormalForm :: Lattice m a -> Lattice Join (Lattice Meet a)
 toJoinNormalForm LBot = LBot
 toJoinNormalForm LTop = LElem LTop

@@ -5,6 +5,7 @@ import           Control.Monad.Primitive
 import           Data.Coerce
 import           Data.Scientific
 import           Smopeck.Logic.Model
+import           Smopeck.Spec.Exp
 import           System.Random.MWC
 
 data End a = Open | Inclusive a | Exclusive a
@@ -66,6 +67,13 @@ nullRange (Range (LeftEnd a) (RightEnd b)) =
         (Inclusive a, Exclusive b) -> a >= b
         (Exclusive a, Inclusive b) -> a >= b
         (Exclusive a, Exclusive b) -> a >= b
+
+interpretRange :: Op -> a -> [Range a]
+interpretRange Eq v = [Range (LeftEnd (Inclusive v)) (RightEnd (Inclusive v))]
+interpretRange Lt v = [Range (LeftEnd Open) (RightEnd (Exclusive v))]
+interpretRange Lte v = [Range (LeftEnd Open) (RightEnd (Inclusive v))]
+interpretRange Gt v = [Range (LeftEnd (Exclusive v)) (RightEnd Open)]
+interpretRange Gte v = [Range (LeftEnd (Inclusive v)) (RightEnd Open)]
 
 intersect :: Ord a => Range a -> Range a -> Bool
 intersect (Range l1 r1) (Range l2 r2) =
