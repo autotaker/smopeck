@@ -3,7 +3,6 @@
 {-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
-{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# LANGUAGE TypeOperators      #-}
@@ -22,7 +21,7 @@ import           Text.Read             hiding (Number, String)
 data TypeExpF (mode :: Mode) (head :: HeadMode) =
     TypeExpF {
         typeExpName :: TypeName head,
-        typeExpBind :: VarName,
+        typeExpBind :: BindName mode,
         typeExpExt  :: TypeExtension mode,
         typeExpRef  :: TypeRefine mode
     }
@@ -40,12 +39,22 @@ data TypeName (head :: HeadMode) where
     Prim :: Primitive -> TypeName head
     User :: String -> TypeName HDefault
 
+data BindName (head :: Mode) where
+    BindName :: String -> BindName Parsed
+    BindDebrujin :: BindName Desugar
+
 deriving instance Eq (TypeName HDefault)
 deriving instance Eq (TypeName WHNF)
 deriving instance Ord (TypeName HDefault)
 deriving instance Ord (TypeName WHNF)
 deriving instance Show (TypeName HDefault)
 deriving instance Show (TypeName WHNF)
+deriving instance Eq (BindName Parsed)
+deriving instance Eq (BindName Desugar)
+deriving instance Ord (BindName Parsed)
+deriving instance Ord (BindName Desugar)
+deriving instance Show (BindName Parsed)
+deriving instance Show (BindName Desugar)
 
 instance Read (TypeName HDefault) where
     readPrec = do
@@ -54,6 +63,7 @@ instance Read (TypeName HDefault) where
             "Object" -> pure $ Prim PObject
             "String" -> pure $ Prim PString
             "Number" -> pure $ Prim PNumber
+            "Int"    -> pure $ Prim PInt
             "Array"  -> pure $ Prim PArray
             "Bool"   -> pure $ Prim PBool
             "Null"   -> pure $ Prim PNull
@@ -77,7 +87,7 @@ deriving instance Show (Exp Desugar)
 type LocationExp mode = LocationF Root (Exp mode)
 type TypeRefine mode = [ (RLocationF (Exp mode), Op, Exp mode)]
 
-evalTypeExp :: WHNFTypeEnv m -> TypeExp m HDefault -> TypeExp m WHNF
+evalTypeExp :: WHNFTypeEnv Desugar -> TypeExp Desugar HDefault -> TypeExp Desugar WHNF
 evalTypeExp env tyExp =
     toJoinNormalForm (tyExp >>= eval) >>= cata g
     where
@@ -96,7 +106,9 @@ evalTypeExp env tyExp =
         fMMeet = curry (join . uncurry (liftM2 intersect))
     }
 
-extend :: VarName -> TypeExtension m -> TypeRefine m -> TypeExpF m WHNF -> TypeExpF m WHNF
+extend :: BindName Desugar -> TypeExtension Desugar
+            -> TypeRefine Desugar -> TypeExpF Desugar WHNF
+            -> TypeExpF Desugar WHNF
 extend bindName ext ref ty = ty {
         typeExpExt = extendTypeExt ext0 ext',
         typeExpRef = ref0 ++ ref'
@@ -105,39 +117,40 @@ extend bindName ext ref ty = ty {
         bindName0 = typeExpBind ty
         ext0 = typeExpExt ty
         ref0 = typeExpRef ty
-        ext' = substTypeExt bindName bindName0 ext
-        ref' = substTypeRefine bindName bindName0 ref
+        ext' = ext
+        ref' = ref
 
 extendTypeExt :: TypeExtension m -> TypeExtension m -> TypeExtension m
 extendTypeExt = M.unionWith (\a b -> b)
 
-substTypeExt :: VarName -> VarName -> TypeExtension m -> TypeExtension m
+{-
+substTypeExt :: VarName -> Int -> TypeExtension m -> TypeExtension m
 substTypeExt bindNameFrom bindNameTo =
     fmap (substTypeExp bindNameFrom bindNameTo)
 
-substTypeRefine :: VarName -> VarName -> TypeRefine m -> TypeRefine m
+substTypeRefine :: VarName -> Int -> TypeRefine m -> TypeRefine m
 substTypeRefine bindNameFrom bindNameTo = map (\(lhs, op, rhs) ->
     (fmap (substExp bindNameFrom bindNameTo) lhs,
      op,
      substExp bindNameFrom bindNameTo rhs))
 
-substExp :: VarName -> VarName -> Exp m -> Exp m
+substExp :: VarName -> Int -> Exp m -> Exp m
 substExp bindNameFrom bindNameTo (Exp exp) =
     Exp (fmap (substLocation bindNameFrom bindNameTo) exp)
 
-substLocation :: VarName -> VarName -> LocationF Root (Exp m) -> LocationF Root (Exp m)
+substLocation :: VarName -> Int -> LocationF Root (Exp m) -> LocationF Root (Exp m)
 substLocation bindNameFrom bindNameTo = fmap (substExp bindNameFrom bindNameTo)
 
-substTypeExp :: VarName -> VarName -> TypeExp m HDefault -> TypeExp m HDefault
+substTypeExp :: VarName -> Int -> TypeExp m HDefault -> TypeExp m HDefault
 substTypeExp bindNameFrom bindNameTo = fmap $ \case
-    ty | typeExpBind ty == bindNameFrom -> ty
-       | typeExpBind ty == bindNameTo -> error "alpha rename"
+    ty | BindName s <- typeExpBind ty, s == bindNameFrom -> ty
        | otherwise -> ty{
-            typeExpExt = substTypeExt bindNameFrom bindNameTo (typeExpExt ty),
-            typeExpRef = substTypeRefine bindNameFrom bindNameTo (typeExpRef ty)
+            typeExpExt = substTypeExt bindNameFrom (bindNameTo + 1) (typeExpExt ty),
+            typeExpRef = substTypeRefine bindNameFrom (bindNameTo + 1) (typeExpRef ty)
         }
+        -}
 
-intersect :: TypeExpF m WHNF -> TypeExpF m WHNF -> TypeExp m WHNF
+intersect :: TypeExpF Desugar WHNF -> TypeExpF Desugar WHNF -> TypeExp Desugar WHNF
 intersect ty1 ty2
     | typeExpName ty1 /= typeExpName ty2 = LBot
     | typeExpName ty1 == typeExpName ty2 =
@@ -146,7 +159,5 @@ intersect ty1 ty2
             typeExpRef = typeExpRef ty1 ++ ref2
         }
     where
-        bindNameFrom = typeExpBind ty2
-        bindNameTo = typeExpBind ty1
-        ext2 = substTypeExt bindNameFrom bindNameTo (typeExpExt ty2)
-        ref2 = substTypeRefine bindNameFrom bindNameTo (typeExpRef ty2)
+        ext2 = typeExpExt ty2
+        ref2 = typeExpRef ty2

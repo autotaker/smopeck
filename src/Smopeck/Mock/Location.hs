@@ -21,7 +21,8 @@ data Blob = BlobAny | BlobInt Int
 type LocationBlob = LocationF Root Blob
 type Location = LocationF Root Int
 
-data Root = Relative | Absolute String
+data Root = Relative Int  -- De Brujin Index
+          | Absolute String
     deriving(Eq, Ord, Show, Generic)
 type FieldName = String
 type RLocationF a = LocationF () a
