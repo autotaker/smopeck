@@ -26,7 +26,10 @@ spec =
             print v
         it "gen object" $ do
             let tyInt = LElem (TypeExpF (Prim PInt) "." M.empty [])
-                ty = LElem (TypeExpF (Prim PObject) "." (M.fromList [("hoge", tyInt), ("fuga", tyInt)])[])
-                ty2 = LElem (TypeExpF (Prim PArray) "." (M.fromList [("length", tyInt), ("get", ty)]) [])
+                tySize = LElem (TypeExpF (Prim PInt) "." M.empty [(Root (), Gt, Exp $ Literal (LNumber 0)), (Root (), Lte, Exp $ Literal (LNumber 10))])
+                tyStr = LElem (TypeExpF (Prim PString) "." M.empty [(Root (), Eq, Exp $ Literal $ LString "fizz")])
+                    `LJoin` LElem (TypeExpF (Prim PString) "." M.empty [(Root (), Eq, Exp $ Literal $ LString "buzz")])
+                ty = LElem (TypeExpF (Prim PObject) "." (M.fromList [("hoge", tyInt), ("fuga", tyStr)])[])
+                ty2 = LElem (TypeExpF (Prim PArray) "." (M.fromList [("length", tySize), ("get", ty)]) [])
             v <- mockJson M.empty ty2
             print $ v

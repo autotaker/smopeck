@@ -13,12 +13,14 @@ import qualified Data.Map                as M
 import           Data.Scientific
 import qualified Data.Set                as S
 import qualified Data.Text               as T
+import           Smopeck.Logic.Equality
 import           Smopeck.Logic.Model
 import           Smopeck.Logic.Number
 import           Smopeck.Mock.Dependency
 import           Smopeck.Mock.Location
 import           Smopeck.Mock.Value
-import           Smopeck.Spec.Exp
+import           Smopeck.Spec.Exp        hiding (interpret)
+import qualified Smopeck.Spec.Exp        as Exp
 import           Smopeck.Spec.Lattice
 import qualified Smopeck.Spec.TypeExp    as T
 import           System.Random.MWC
@@ -44,43 +46,21 @@ data Context = Context {
 initContext :: TypeEnv -> IO Context
 initContext env = Context <$> H.new <*> pure env <*> createSystemRandom
 
-generateNumber :: Lattice Full (Op, Scientific) -> SolveM Scientific
-generateNumber lat = do
+genInstance :: Model m => Lattice Full (Op, Literal Desugar) -> SolveM m
+genInstance lat = do
   let g = cata CataFull{
             fFBot = bot,
             fFTop = top,
             fFJoin = join,
             fFMeet = meet,
-            fFElem = toRange
+            fFElem = uncurry interpret
           } lat
-      toRange (op, v) = RangeAreaD (interpretRange op d)
-        where
-          d = case toBoundedRealFloat v of
-            Left b  -> b
-            Right b -> b
   gen <- asks randState
   r <- generate gen g
   case r of
-    Just v  -> pure $ fromFloatDigits v
+    Just v  -> pure v
     Nothing -> error "no such value"
 
-generateInt :: Lattice Full (Op, Scientific) -> SolveM Scientific
-generateInt lat = do
-  let g = cata CataFull{
-            fFBot = bot,
-            fFTop = top,
-            fFJoin = join,
-            fFMeet = meet,
-            fFElem = toRange
-          } lat
-      toRange (op, v) = RangeAreaI (interpretRange op d)
-        where
-          d = floor v
-  gen <- asks randState
-  r <- generate gen g
-  case r of
-    Just v  -> pure $ fromIntegral v
-    Nothing -> error "no such value"
 
 
 chooseShape :: TypeExp -> SolveM TypeExpF
@@ -89,7 +69,6 @@ chooseShape ty = do
   let cands = toList ty
   idx <- uniformR (0, length cands - 1) gen
   pure $ cands !! idx
-
 
 extract :: Location -> SolveM JSON.Value
 extract loc = evalL loc >>= \case
@@ -139,17 +118,28 @@ evalT loc ty = do
     T.Prim T.PNumber -> do
       predicates <-
         T.typeExpRef tyF
-          & filter (\case { (Root (), _, _) -> True; _ -> False})
-          & mapM (\(_, op, e) -> LElem . (op, ) <$> evalNumber e)
-      v <- generateNumber (foldr LMeet LTop predicates)
-      pure (VNumber v)
+          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+      v <- genInstance (foldr LMeet LTop predicates)
+      pure (VNumber (fromFloatDigits (v :: Double)))
     T.Prim T.PInt -> do
       predicates <-
         T.typeExpRef tyF
-          & filter (\case { (Root (), _, _) -> True; _ -> False})
-          & mapM (\(_, op, e) -> LElem . (op, ) <$> evalNumber e)
-      v <- generateInt (foldr LMeet LTop predicates)
-      pure (VNumber v)
+          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+      v <- genInstance (foldr LMeet LTop predicates)
+      pure (VNumber (fromIntegral (v::Int)))
+    T.Prim T.PString -> do
+      predicates <-
+        T.typeExpRef tyF
+          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+      (Equality v) <- genInstance (foldr LMeet LTop predicates)
+      pure (VString v)
+    T.Prim T.PBool -> do
+      predicates <-
+        T.typeExpRef tyF
+          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+      (Equality v) <- genInstance (foldr LMeet LTop predicates)
+      pure (VBool v)
+    T.Prim T.PNull -> pure VNull
     T.Prim T.PObject -> do
       let exts = T.typeExpExt tyF
           fields = M.keysSet exts
@@ -187,7 +177,7 @@ evalExp (T.Exp e) = go e
   where
   go (Literal l)   = pure (Right l)
   go (Var x)       = Left <$> traverse (fmap floor . evalNumber) x
-  go (App op args) = Right . interpret op <$> mapM f args
+  go (App op args) = Right . Exp.interpret op <$> mapM f args
     where
       f e = go e >>= \case
         Right l -> pure l

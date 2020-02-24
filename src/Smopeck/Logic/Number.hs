@@ -5,7 +5,8 @@ import           Control.Monad.Primitive
 import           Data.Coerce
 import           Data.Scientific
 import           Smopeck.Logic.Model
-import           Smopeck.Spec.Exp
+import           Smopeck.Mock.Value
+import           Smopeck.Spec.Exp        hiding (interpret)
 import           System.Random.MWC
 
 data End a = Open | Inclusive a | Exclusive a
@@ -47,6 +48,27 @@ instance Model Double where
     meet x y = RangeAreaD (meetArea (coerce x) (coerce y))
     generate st xs = generateArea st eps (coerce xs)
         where eps x = abs x * 1e-53
+    interpret Eq (LNumber v) =
+        RangeAreaD [Range (LeftEnd (Inclusive d)) (RightEnd (Inclusive d))]
+        where d = toDouble v
+    interpret Lt (LNumber v) =
+        RangeAreaD [Range (LeftEnd Open) (RightEnd (Exclusive d))]
+        where d = toDouble v
+    interpret Lte (LNumber v) =
+        RangeAreaD [Range (LeftEnd Open) (RightEnd (Inclusive d))]
+        where d = toDouble v
+    interpret Gt (LNumber v) =
+        RangeAreaD [Range (LeftEnd (Exclusive d)) (RightEnd Open)]
+        where d = toDouble v
+    interpret Gte (LNumber v) =
+        RangeAreaD [Range (LeftEnd (Inclusive d)) (RightEnd Open)]
+        where d = toDouble v
+    interpret op v = error $ "cannot interpret: " ++ show (op, v)
+
+toDouble :: Scientific -> Double
+toDouble v = case toBoundedRealFloat v of
+    Left v  -> v
+    Right v -> v
 
 instance Model Int where
     newtype Atom Int = RangeAreaI [Range Int]
@@ -56,7 +78,20 @@ instance Model Int where
     meet x y = RangeAreaI (meetArea (coerce x) (coerce y))
     generate st xs = generateArea st eps (coerce xs)
         where eps x = 1
-
+    interpret Eq v
+        = meet (interpret Lte v) (interpret Gte v)
+    interpret Lt (LNumber v) =
+        RangeAreaI [Range (LeftEnd Open) (RightEnd (Inclusive i))]
+        where i = ceiling (v - 1)
+    interpret Lte (LNumber v) =
+        RangeAreaI [Range (LeftEnd Open) (RightEnd (Inclusive i))]
+        where i = floor v
+    interpret Gt (LNumber v) =
+        RangeAreaI [Range (LeftEnd (Inclusive i)) (RightEnd Open)]
+        where i = floor (v + 1)
+    interpret Gte (LNumber v) =
+        RangeAreaI [Range (LeftEnd (Inclusive i)) (RightEnd Open)]
+        where i = ceiling v
 
 nullRange :: Ord a => Range a -> Bool
 nullRange (Range (LeftEnd a) (RightEnd b)) =

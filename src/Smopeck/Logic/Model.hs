@@ -1,7 +1,10 @@
+{-# LANGUAGE DataKinds    #-}
 {-# LANGUAGE TypeFamilies #-}
 module Smopeck.Logic.Model where
 
 import           Control.Monad.Primitive
+import           Smopeck.Mock.Value
+import           Smopeck.Spec.Exp
 import           System.Random.MWC
 
 class Model m where
@@ -11,3 +14,4 @@ class Model m where
     top  :: Atom m
     bot  :: Atom m
     generate :: PrimMonad f => Gen (PrimState f) -> Atom m -> f (Maybe m)
+    interpret :: Op -> Literal Desugar -> Atom m
