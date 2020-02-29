@@ -2,7 +2,9 @@
 {-# LANGUAGE GADTs     #-}
 module Smopeck.Spec.Desugar where
 
-import qualified Data.Map             as M
+import           Data.List
+import qualified Data.Map              as M
+import           Smopeck.Mock.Location
 import           Smopeck.Spec.Exp
 import           Smopeck.Spec.TypeExp
 
@@ -19,18 +21,35 @@ desugarLiteral (LString s)   = Literal (LString s)
 desugarLiteral (LDQString s) = error "not yet implemented"
 desugarLiteral (LRegex x)    = Literal (LRegex x)
 
-desugarTypeExp :: TypeExp Parsed head -> TypeExp Desugar head
-desugarTypeExp = fmap desugarTypeExpF
+type BindEnv = [String]
 
-desugarTypeExpF :: TypeExpF Parsed head -> TypeExpF Desugar head
-desugarTypeExpF ty = ty {
+desugarTypeExp :: BindEnv -> TypeExp Parsed head -> TypeExp Desugar head
+desugarTypeExp env = fmap (desugarTypeExpF env)
+
+desugarTypeExpF :: BindEnv -> TypeExpF Parsed head -> TypeExpF Desugar head
+desugarTypeExpF env ty = ty {
     typeExpBind = BindDebrujin,
-    typeExpExt = desugarTypeExt (typeExpExt ty),
-    typeExpRef = desugarTypeRef (typeExpRef ty)
-}
+    typeExpExt = desugarTypeExt (name:env) (typeExpExt ty),
+    typeExpRef = desugarTypeRef (name:env) (typeExpRef ty)
+    } where BindName name = typeExpBind ty
 
-desugarTypeExt :: TypeExtension Parsed -> TypeExtension Desugar
-desugarTypeExt = undefined
+desugarTypeExt :: BindEnv -> TypeExtension Parsed -> TypeExtension Desugar
+desugarTypeExt env = fmap (desugarTypeExp env)
 
-desugarTypeRef :: TypeRefine Parsed -> TypeRefine Desugar
-desugarTypeRef = undefined
+desugarTypeRef :: BindEnv -> TypeRefine Parsed -> TypeRefine Desugar
+desugarTypeRef env = map (\(op, Exp e) ->
+    (op, Exp $ desugarExpF $ fmap (desugarLocationExp env) e))
+
+desugarExp :: BindEnv -> Exp Parsed -> Exp Desugar
+desugarExp env (Exp e) = Exp $ desugarExpF $ fmap (desugarLocationExp env) e
+
+desugarLocationExp :: BindEnv -> LocationExp Parsed -> LocationExp Desugar
+desugarLocationExp env = go
+    where
+        go (Root (Absolute s))
+            | Just i <- elemIndex s env = Root (Relative i)
+            | otherwise = Root (Absolute s)
+        go (Root (Relative i)) = Root (Relative i)
+        go (loc `Field` f) = go loc `Field` f
+        go (loc `Get` e) = go loc `Get` desugarExp env e
+

@@ -76,6 +76,7 @@ test-suite unit-test
         Smopeck.Spec.ExpSpec
         Smopeck.Spec.ParserSpec
         Smopeck.Spec.LexerSpec
+        Smopeck.Spec.DesugarSpec
         Smopeck.Spec.ValidatorSpec
         Smopeck.Mock.LocationSpec
         Smopeck.Mock.DependencySpec

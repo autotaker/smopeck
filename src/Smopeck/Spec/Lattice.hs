@@ -34,6 +34,9 @@ data Lattice (m :: LatticeMode) a where
 deriving instance Functor (Lattice m)
 deriving instance Foldable (Lattice m)
 deriving instance Traversable (Lattice m)
+deriving instance Show a => Show (Lattice m a)
+deriving instance Eq a => Eq (Lattice m a)
+deriving instance Ord a => Ord (Lattice m a)
 
 instance Applicative (Lattice m) where
     pure = LElem

@@ -118,25 +118,25 @@ evalT loc ty = do
     T.Prim T.PNumber -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
       v <- genInstance (foldr LMeet LTop predicates)
       pure (VNumber (fromFloatDigits (v :: Double)))
     T.Prim T.PInt -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
       v <- genInstance (foldr LMeet LTop predicates)
       pure (VNumber (fromIntegral (v::Int)))
     T.Prim T.PString -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
       (Equality v) <- genInstance (foldr LMeet LTop predicates)
       pure (VString v)
     T.Prim T.PBool -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(_, op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
       (Equality v) <- genInstance (foldr LMeet LTop predicates)
       pure (VBool v)
     T.Prim T.PNull -> pure VNull

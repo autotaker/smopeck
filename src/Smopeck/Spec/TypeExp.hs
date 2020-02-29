@@ -1,11 +1,13 @@
-{-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE ExplicitForAll     #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies       #-}
-{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE ExplicitForAll       #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Smopeck.Spec.TypeExp where
 
 import           Control.Monad
@@ -25,6 +27,12 @@ data TypeExpF (mode :: Mode) (head :: HeadMode) =
         typeExpExt  :: TypeExtension mode,
         typeExpRef  :: TypeRefine mode
     }
+
+deriving instance (Show (Exp mode), Show (TypeName head), Show (BindName mode), Show (TypeExtension mode) ) =>
+    Show (TypeExpF mode head)
+deriving instance (Eq (Exp mode), Eq (TypeName head), Eq (BindName mode), Eq (TypeExtension mode) ) =>
+    Eq (TypeExpF mode head)
+
 
 -- type TypeExp mode head = Lattice Full (TypeExpF mode head)
 type family LatticeOf (head :: HeadMode) :: LatticeMode where
@@ -85,7 +93,7 @@ deriving instance Eq (Exp Desugar)
 deriving instance Ord (Exp Desugar)
 deriving instance Show (Exp Desugar)
 type LocationExp mode = LocationF Root (Exp mode)
-type TypeRefine mode = [ (RLocationF (Exp mode), Op, Exp mode)]
+type TypeRefine mode = [ (Op, Exp mode)]
 
 evalTypeExp :: WHNFTypeEnv Desugar -> TypeExp Desugar HDefault -> TypeExp Desugar WHNF
 evalTypeExp env tyExp =
