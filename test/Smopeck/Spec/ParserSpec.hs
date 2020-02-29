@@ -1,24 +1,24 @@
+{-# LANGUAGE DataKinds #-}
 module Smopeck.Spec.ParserSpec where
 
-import qualified Data.Map            as M
 import           Smopeck.Spec.Lexer
 import           Smopeck.Spec.Parser
-import           Smopeck.Spec.Syntax
+import           Smopeck.Spec.Syntax  hiding (Eq, Gt, Lt)
+import qualified Smopeck.Spec.TypeExp as T
 import           Test.Hspec
 
 spec :: Spec
-spec = pure ()
-{-
+spec =
     describe "Smopeck.Spec.Parser" $ do
+        it "read typename" $
+            read "String" `shouldBe` (T.Prim T.PString :: T.TypeName 'T.HDefault)
         it "parse type synonym def" $ do
             let tokens = [Type, UpperId "Sample", Eq, UpperId "String"]
-            runLexerMock parse tokens `shouldBe` Right (TypeDef (User "Sample") (TypeExp (Prim PString) M.empty []))
+            runLexerMock parse tokens `shouldBe` Right (TypeDef "Sample" (fTypeExp "String" "." [] []))
         it "parse type synonym def" $ do
-            let tokens = [Type, UpperId "Sample", Eq, UpperId "Json", Lbra, LowerId "name" , Colon, UperId "String", Rbra]
-            runLexerMock parse tokens `shouldBe` Right (TypeDef (User "Sample") (TypeExp (User "Json") "." (M.fromList [("name", TypeExp (Prim PString) "." M.empty [])]) []))
+            let tokens = [Type, UpperId "Sample", Eq, UpperId "Json", Lbra, LowerId "name" , Colon, UpperId "String", Rbra]
+            runLexerMock parse tokens `shouldBe` Right (TypeDef "Sample" (fTypeExp "Json" "." ([("name", fTypeExp "String" "." [] [])]) []))
 
         it "parse empty endpoint def" $ do
             let tokens = [Endpoint, DQString "/", UpperId "GET", Lbra, Rbra]
             runLexerMock parse tokens `shouldBe` Right (EndpointDef "/" "GET" [])
-
--}

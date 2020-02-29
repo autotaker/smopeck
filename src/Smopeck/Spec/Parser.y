@@ -6,7 +6,9 @@ module Smopeck.Spec.Parser(
     , runLexerMock
     , parse
 ) where
-import Smopeck.Spec.Lexer
+import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt)
+import qualified Smopeck.Spec.Lexer as L
+
 import Smopeck.Spec.Syntax
 import Control.Monad.Free
 }
@@ -20,9 +22,9 @@ import Control.Monad.Free
 %token
     type     { Type }
     endpoint { Endpoint }
-    '='      { Eq }
-    '<'      { Lt }
-    '>'      { Gt }
+    '='      { L.Eq }
+    '<'      { L.Lt }
+    '>'      { L.Gt }
     '|'      { Join }
     '&'      { Meet }
     ','      { Comma }
@@ -39,11 +41,11 @@ TopLevelDef : TypeDef       { $1 }
             | EndpointDef   { $1 }
 
 
-TypeDef : type upper '=' TypeExp { TypeDef (read $2) $4 }
+TypeDef : type upper '=' TypeExp { TypeDef $2 $4 }
 
 TypeExp 
-    : upper                  { TypeExp (read $1) "" [] [] }
-    | upper TypeExtension    { TypeExp (read $1) "" $2 [] }
+    : upper                  { fTypeExp $1 "." [] [] }
+    | upper TypeExtension    { fTypeExp $1 "." $2 [] }
 
 TypeExtension 
     : '{' '}'                   { [] } 

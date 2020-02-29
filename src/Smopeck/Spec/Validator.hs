@@ -9,23 +9,26 @@ import           Data.Aeson
 import qualified Data.Map             as M
 import           Data.Scientific
 import           Data.Text
+import           Smopeck.Spec.Lattice
 import           Smopeck.Spec.Syntax
+import           Smopeck.Spec.TypeExp (Primitive (..), TypeName (..),
+                                       typeExpExt, typeExpName, typeExpRef)
 
 type Env = M.Map VarName Value
 validateJson :: TypeEnv -> Env -> Value -> TypeExp -> Except String ()
 validateJson tyEnv env = go
     where
     go :: Value -> TypeExp -> Except String ()
-    go val (UnionType ty1 ty2) = go val ty1 <|> go val ty2
-    go val (IntersectionType ty1 ty2) = go val ty1 >> go val ty2
-    go (String txt) tyExp | Prim PString <- typeExpName tyExp =
+    go val (LJoin ty1 ty2) = go val ty1 <|> go val ty2
+    go val (LMeet ty1 ty2) = go val ty1 >> go val ty2
+    go (String txt) (LElem tyExp) | Prim PString <- typeExpName tyExp =
         matchString txt (typeExpRef tyExp)
-    go (Number num) tyExp | Prim PNumber <- typeExpName tyExp =
+    go (Number num) (LElem tyExp) | Prim PNumber <- typeExpName tyExp =
         matchNumber num (typeExpRef tyExp)
-    go (Bool bool) tyExp | Prim PBool <- typeExpName tyExp =
+    go (Bool bool) (LElem tyExp) | Prim PBool <- typeExpName tyExp =
         matchBool bool (typeExpRef tyExp)
-    go Null tyExp | Prim PNull <- typeExpName tyExp = pure ()
-    go (Object obj) tyExp | Prim PObject <- typeExpName tyExp =
+    go Null (LElem tyExp) | Prim PNull <- typeExpName tyExp = pure ()
+    go (Object obj) (LElem tyExp) | Prim PObject <- typeExpName tyExp =
         matchObject obj (typeExpExt tyExp) (typeExpRef tyExp)
     go val ty = throwError $ show val ++ " does not match type: " ++ show ty
     matchString :: Text -> TypeRefine -> Except String ()
@@ -34,6 +37,6 @@ validateJson tyEnv env = go
     matchNumber _ _ = pure () -- to be implemented
     matchBool :: Bool -> TypeRefine -> Except String ()
     matchBool _ _ = pure ()
-    matchObject :: Object -> TypeExtension -> TypeRefine -> Except String ()
+    matchObject :: Object -> M.Map FieldName TypeExp -> TypeRefine -> Except String ()
     matchObject _ _ _ = pure () -- to be implemented
 

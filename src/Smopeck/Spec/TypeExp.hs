@@ -92,6 +92,9 @@ newtype Exp mode = Exp (ExpF mode (LocationExp mode))
 deriving instance Eq (Exp Desugar)
 deriving instance Ord (Exp Desugar)
 deriving instance Show (Exp Desugar)
+deriving instance Eq (Exp Parsed)
+deriving instance Ord (Exp Parsed)
+deriving instance Show (Exp Parsed)
 type LocationExp mode = LocationF Root (Exp mode)
 type TypeRefine mode = [ (Op, Exp mode)]
 

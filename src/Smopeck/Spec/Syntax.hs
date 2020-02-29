@@ -1,60 +1,42 @@
 {-# LANGUAGE DataKinds #-}
-module Smopeck.Spec.Syntax  where
+module Smopeck.Spec.Syntax(
+    TopLevelDef(..),
+    Route, Method, VarName, UserType, TypeExp, TypeEnv, Primitive,
+    TypeExtension, Exp, TypeRefine, FieldName,
+    module Smopeck.Spec.Exp,
+    fTypeExp
+)  where
 
 import qualified Data.Map              as M
 import           Smopeck.Mock.Location
 import           Smopeck.Spec.Exp
+import           Smopeck.Spec.Lattice
+import qualified Smopeck.Spec.TypeExp  as TypeExp
 import           Text.Read             hiding (Number, String)
 
 data TopLevelDef =
-    TypeDef TypeName TypeExp
+    TypeDef UserType TypeExp
     | EndpointDef Route Method TypeExtension
-    deriving(Eq, Ord, Show)
+    deriving(Eq, Show)
 
-data TypeName = Prim Primitive | User String
-    deriving(Eq,Ord,Show)
-type Route = String
+type Route = TypeExp.Route
 type Method = String
-type VarName = String
-
-type TypeEnv = M.Map TypeName TypeExp
-data Primitive = PObject | PString | PNumber | PArray | PBool | PNull
-    deriving(Eq,Ord,Show)
-
-instance Read TypeName where
-    readPrec = do
-        Ident x <- lexP
-        case x of
-            "Object" -> pure $ Prim PObject
-            "String" -> pure $ Prim PString
-            "Number" -> pure $ Prim PNumber
-            "Array"  -> pure $ Prim PArray
-            "Bool"   -> pure $ Prim PBool
-            "Null"   -> pure $ Prim PNull
-            _        -> pure $ User x
+type VarName = TypeExp.VarName
+type UserType = TypeExp.UserType
+type TypeExp = TypeExp.TypeExp Parsed TypeExp.HDefault
 
 
-data TypeExp =
-    TypeExp {
-        typeExpName :: TypeName,
-        typeExpBind :: VarName,
-        typeExpExt  :: TypeExtension,
-        typeExpRef  :: TypeRefine
-    }
-    | UnionType TypeExp TypeExp
-    | IntersectionType TypeExp TypeExp
-    deriving(Eq, Ord, Show)
-type TypeExtension = [ (FieldName, TypeExp) ]
-newtype Exp = Exp (ExpF Parsed (LocationF Root Exp))
-    deriving(Eq, Ord, Show)
-type TypeRefine = [ (RLocationF Exp, Op, Exp) ]
+type TypeEnv = TypeExp.DefaultTypeEnv Parsed
+type Primitive = TypeExp.Primitive
 
-data Literal =
-    DQStringLiteral String
-    | SQStringLiteral String
-    | BooleanLiteral Bool
-    | NumberLiteral Double
-    | RegexLiteral String
-    deriving(Eq, Ord,Show)
+type TypeExtension = [(UserType, TypeExp) ]
+type Exp = TypeExp.Exp Parsed
+type TypeRefine = TypeExp.TypeRefine Parsed
 
-data BinOp = OpEq | OpMatch deriving(Eq, Ord,Show)
+fTypeExp :: String -> String -> TypeExtension -> TypeRefine -> TypeExp
+fTypeExp tyName bindName ext ref =
+    LElem $ TypeExp.TypeExpF
+        (read tyName)
+        (TypeExp.BindName bindName)
+        (M.fromList ext)
+        ref
