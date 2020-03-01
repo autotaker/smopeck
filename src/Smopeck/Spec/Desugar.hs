@@ -23,6 +23,9 @@ desugarLiteral (LRegex x)    = Literal (LRegex x)
 
 type BindEnv = [String]
 
+desugarTypeEnv :: DefaultTypeEnv Parsed -> DefaultTypeEnv Desugar
+desugarTypeEnv = fmap (desugarTypeExp [])
+
 desugarTypeExp :: BindEnv -> TypeExp Parsed head -> TypeExp Desugar head
 desugarTypeExp env = fmap (desugarTypeExpF env)
 

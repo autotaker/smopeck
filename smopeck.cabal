@@ -55,6 +55,7 @@ library
         mtl -any,
         containers -any,
         text -any,
+        bytestring -any,
         scientific -any,
         hashable -any,
         primitive -any

@@ -10,7 +10,7 @@ import           Smopeck.Spec.TypeExp
 import           Test.Hspec
 
 spec :: Spec
-spec = describe "Smopeck.Spec.Desugar.desugarTypeExp" $ do
+spec = describe "Smopeck.Spec.Desugar.desugarTypeExp" $
     it "test" $ do
         let tyInt = LElem $ TypeExpF (Prim PInt) (BindName "i") M.empty [ (Eq, Exp $ Var (Root (Absolute "obj")))]
             tyObj :: TypeExp 'Parsed 'HDefault

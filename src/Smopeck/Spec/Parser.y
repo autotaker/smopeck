@@ -37,6 +37,10 @@ import Control.Monad.Free
 
 %%
 
+TopLevelDefList 
+    : TopLevelDef                 { [$1] }
+    | TopLevelDef TopLevelDefList { $1 : $2 } 
+
 TopLevelDef : TypeDef       { $1 }
             | EndpointDef   { $1 }
 

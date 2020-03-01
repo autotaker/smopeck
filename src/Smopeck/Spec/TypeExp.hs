@@ -11,6 +11,8 @@
 module Smopeck.Spec.TypeExp where
 
 import           Control.Monad
+import           Data.Foldable
+import           Data.Graph
 import           Data.Kind
 import qualified Data.Map              as M
 import           Data.Type.Bool
@@ -98,6 +100,25 @@ deriving instance Show (Exp Parsed)
 type LocationExp mode = LocationF Root (Exp mode)
 type TypeRefine mode = [ (Op, Exp mode)]
 
+evalTypeEnv :: DefaultTypeEnv Desugar -> WHNFTypeEnv Desugar
+evalTypeEnv env = env'
+    where
+    env' = foldl' (\acc v ->
+        let (def, tyName, _) = idx v
+            def' = evalTypeExp acc def in
+        M.insert tyName def' acc) M.empty (topSort graph)
+    graph :: Graph
+    (graph, idx) = graphFromEdges' $ do
+        (tyName, def) <- M.toList env
+        pure (def, tyName, dependency def)
+    dependency :: TypeExp Desugar HDefault -> [UserType]
+    dependency def = do
+        tyExp <- toList def
+        case typeExpName tyExp of
+            Prim _ -> []
+            User s -> pure s
+
+
 evalTypeExp :: WHNFTypeEnv Desugar -> TypeExp Desugar HDefault -> TypeExp Desugar WHNF
 evalTypeExp env tyExp =
     toJoinNormalForm (tyExp >>= eval) >>= cata g
@@ -107,7 +128,9 @@ evalTypeExp env tyExp =
     eval tyExp@TypeExpF{ typeExpName = User userType } =
         castFull $ fmap (extend bindName ext ref) typeDef
             where
-            typeDef = env M.! userType
+            typeDef = case M.lookup userType env of
+                Just v  -> v
+                Nothing -> error $ "undefined or cycle type: " ++ userType
             ext = typeExpExt tyExp
             ref = typeExpRef tyExp
             bindName = typeExpBind tyExp

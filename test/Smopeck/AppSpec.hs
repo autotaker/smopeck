@@ -40,7 +40,7 @@ spec =
                 }
             runReaderT (runMockAppM main) mockService
         it "execute TestApp" $ do
-            let config = TestConfig
+            let config = TestConfig "example.spec"
                 mockService = mockServiceBase {
                     mockGetCommand = pure (Test config),
                     mockRunTestApp = \conf -> conf `shouldBe` config

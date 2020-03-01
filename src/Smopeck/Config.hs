@@ -23,7 +23,9 @@ data MockConfig = MockConfig {
     listenAddr :: !TcpConfig
 } deriving(Eq, Ord, Show)
 
-data TestConfig = TestConfig
+data TestConfig = TestConfig {
+    smopeckFile :: !FilePath
+}
     deriving(Eq, Ord, Show)
 
 data ProxyConfig = ProxyConfig
@@ -42,7 +44,7 @@ mockOpts = info parser flags
 
 testOpts = info parser flags
   where
-    parser = pure (Test TestConfig)
+    parser = Test . TestConfig <$> strArgument (metavar "SPEC")
     flags  = progDesc "Test mode" <> fullDesc
 
 proxyOpts = info parser flags
