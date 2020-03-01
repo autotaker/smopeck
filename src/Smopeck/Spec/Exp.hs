@@ -81,6 +81,7 @@ interpret Add [LNumber x, LNumber y] = LNumber $ x + y
 interpret Add [LString x, LString y] = LString $ x ++ y
 interpret Add [LRegex x, LRegex y] = LRegex $ x ++ y
 interpret Sub [LNumber x, LNumber y] = LNumber $ x - y
+interpret Sub [LNumber x] = LNumber $ -x
 interpret Mul [LNumber x, LNumber y] = LNumber $ x * y
 interpret Div [LNumber x, LNumber y] = LNumber $ x / y
 interpret Eq [x, y] = LBool $ x == y

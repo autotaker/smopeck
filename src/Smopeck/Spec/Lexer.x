@@ -1,5 +1,6 @@
 {
 module Smopeck.Spec.Lexer where
+import Data.Scientific
 }
 
 %wrapper "monadUserState"
@@ -7,6 +8,7 @@ module Smopeck.Spec.Lexer where
 $capital = [A-Z]
 $small = [a-z]
 $alphanum = [A-Za-z0-9]
+$digit = [0-9]
 
 tokens :-
   <0> $white+                               ;
@@ -19,6 +21,8 @@ tokens :-
   <0> "="                                   { token $ \_ _ -> Eq }
   <0> "<"                                   { token $ \_ _ -> Lt }
   <0> ">"                                   { token $ \_ _ -> Gt }
+  <0> "<="                                  { token $ \_ _ -> Lte }
+  <0> ">="                                  { token $ \_ _ -> Gte }
   <0> "+"                                   { token $ \_ _ -> Add }
   <0> "-"                                   { token $ \_ _ -> Sub }
   <0> "*"                                   { token $ \_ _ -> Mul }
@@ -34,10 +38,15 @@ tokens :-
   <0> \.                                    { token $ \_ _ -> Dot }
   <0> "@"                                   { token $ \_ _ -> As }
   <0> \#                                    { token $ \_ _ -> Hash }
+  <0> $digit+(\.$digit+)?                   { token $ \s len -> Number $ read $ lexeme s len }
   <0> \"                                    { begin dqstr }
   <dqstr> \\[\" \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
   <dqstr> \"                                { (\_ _ -> DQString <$> flushStringValue) `andBegin` 0 }
   <dqstr> [^"]                              { \s len -> let [ch] = lexeme s len in pushChar ch >> alexMonadScan }
+  <0> \'                                    { begin sqstr }
+  <sqtr> \\[\' \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
+  <sqstr> \'                                { (\_ _ -> SQString <$> flushStringValue) `andBegin` 0 }
+  <sqstr> [^']                              { \s len -> let [ch] = lexeme s len in pushChar ch >> alexMonadScan }
 
 {
 data Token = 
@@ -46,7 +55,7 @@ data Token =
   | Eq | Join | Meet
   | Lpar | Rpar
   | Lbra | Rbra
-  | Lt | Gt
+  | Lt | Gt | Lte | Gte
   | Lsq | Rsq
   | Add | Sub | Mul | Div
   | Colon
@@ -56,7 +65,7 @@ data Token =
   | DQString String
   | SQString String
   | Regex String
-  | Number Double
+  | Number Scientific
   | LowerId String
   | UpperId String
   | EOF

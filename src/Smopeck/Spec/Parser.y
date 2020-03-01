@@ -6,7 +6,7 @@ module Smopeck.Spec.Parser(
     , runLexerMock
     , parse
 ) where
-import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt)
+import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte)
 import qualified Smopeck.Spec.Lexer as L
 
 import Smopeck.Spec.Syntax
@@ -26,6 +26,12 @@ import Control.Monad.Free
     '='      { L.Eq }
     '<'      { L.Lt }
     '>'      { L.Gt }
+    '<='     { L.Lte }
+    '>='     { L.Gte }
+    '+'      { L.Add }
+    '-'      { L.Sub }
+    '*'      { L.Mul }
+    '/'      { L.Div }
     '|'      { Join }
     '&'      { Meet }
     ','      { Comma }
@@ -40,7 +46,15 @@ import Control.Monad.Free
     '@'      { As }
     lower    { LowerId $$ }
     upper    { UpperId $$ }
+    number   { Number $$ }
     dqLiteral { DQString  $$ }
+    sqLiteral { SQString  $$ }
+
+%left '|'
+%left '&'
+%left '+' '-'
+%left '*' '/'
+%left NEG
 
 %%
 
@@ -65,6 +79,9 @@ TypeExpNameBindExtRef
     | TypeExpNameBindExt TypeRef { $1 $2 }
 
 TypeExp : TypeExpNameBindExtRef { $1 }
+        | '(' TypeExp ')' { $2 }
+        | TypeExp '&' TypeExp { LMeet $1 $3 }
+        | TypeExp '|' TypeExp { LJoin $1 $3 }
 
 TypeExtension 
     : '{' '}'                   { [] } 
@@ -81,7 +98,13 @@ TypeRefList
     : TypeRefEntry                 { [$1]    }
     | TypeRefEntry ',' TypeRefList { $1 : $3 }
 
-TypeRefEntry : '.' '=' Exp { (Eq, $3) }
+TypeRefEntry : '.' CompOp Exp { ($2, $3) }
+
+CompOp : '=' { Eq }
+       | '<' { Lt }
+       | '>' { Gt }
+       | '<=' { Lte }
+       | '>=' { Gte }
 
 Field : lower               { FieldString $1 }
       | lower '(' lower ')' { FieldIndex (BindName $3) }
@@ -94,7 +117,19 @@ LocationExp : '.' { Root (Relative 0) }
             | lower { Root (Absolute $1) }
             | LocationExp '.' FieldExp { Chain $1 $3 }
 
-Exp : LocationExp { T.Exp (Var $1) }
+Exp : ExpF { T.Exp $1 }
+ExpF 
+    : LocationExp   { Var $1 }
+    | Literal       { Literal $1 }
+    | '(' ExpF ')'  { $2 }
+    | ExpF '+' ExpF { App Add [$1, $3] }
+    | ExpF '-' ExpF { App Sub [$1, $3] }
+    | ExpF '*' ExpF { App Mul [$1, $3] }
+    | ExpF '/' ExpF { App Div [$1, $3] }
+    | '-' ExpF %prec NEG { App Sub [$2] }
+Literal : dqLiteral { LDQString $1 }
+        | sqLiteral { LString $1 }
+        | number    { LNumber $1 }
 
 {
 -- Footer
