@@ -95,7 +95,6 @@ LocationExp : '.' { Root (Relative 0) }
             | LocationExp '.' FieldExp { Chain $1 $3 }
 
 Exp : LocationExp { T.Exp (Var $1) }
-    | Exp 
 
 {
 -- Footer
