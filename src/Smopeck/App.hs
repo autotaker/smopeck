@@ -8,10 +8,10 @@ module Smopeck.App
 where
 import           Control.Monad.Reader
 import qualified Smopeck.App.Mock     as Mock
-
 import qualified Smopeck.App.Proxy    as Proxy
 import qualified Smopeck.App.Test     as Test
 import           Smopeck.Config
+import           System.IO
 
 class MonadIO m => AppM m where
     getCommand :: m Command
@@ -32,7 +32,7 @@ instance AppM DefaultAppM where
 main :: AppM m => m ()
 main = do
     config <- getCommand
-    liftIO $ print config
+    liftIO $ hPrint stderr config
     case config of
         Mock conf  -> runMockApp conf
         Test conf  -> runTestApp conf

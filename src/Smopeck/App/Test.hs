@@ -26,11 +26,11 @@ runApp config = runExceptT doit >>= \case
     where
     doit :: ExceptT String IO ()
     doit = do
-        liftIO $ print config
+        liftIO $ hPrint stderr config
         content <- liftIO $ readFile (smopeckFile config)
         defs <- ExceptT (pure $ runAlex content (runLexer parse))
 
-        liftIO $ print defs
+        liftIO $ mapM_ (hPrint stderr) defs
         let typeEnv = M.fromList [ (tyName, def) | TypeDef tyName def <- defs ]
                 & desugarTypeEnv
                 & evalTypeEnv
