@@ -37,7 +37,11 @@ desugarTypeExpF env ty = ty {
     } where BindName name = typeExpBind ty
 
 desugarTypeExt :: BindEnv -> TypeExtension Parsed -> TypeExtension Desugar
-desugarTypeExt env = fmap (desugarTypeExp env)
+desugarTypeExt env = M.fromList . map f . M.toList
+    where
+    f (FieldString s, ty) = (FieldString s, desugarTypeExp env ty)
+    f (FieldIndex (BindName i), ty) =
+        (FieldIndex BindDebrujin, desugarTypeExp (i:env) ty)
 
 desugarTypeRef :: BindEnv -> TypeRefine Parsed -> TypeRefine Desugar
 desugarTypeRef env = map (\(op, Exp e) ->

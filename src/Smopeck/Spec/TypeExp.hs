@@ -53,18 +53,12 @@ data BindName (head :: Mode) where
     BindName :: String -> BindName Parsed
     BindDebrujin :: BindName Desugar
 
-deriving instance Eq (TypeName HDefault)
-deriving instance Eq (TypeName WHNF)
-deriving instance Ord (TypeName HDefault)
-deriving instance Ord (TypeName WHNF)
-deriving instance Show (TypeName HDefault)
-deriving instance Show (TypeName WHNF)
-deriving instance Eq (BindName Parsed)
-deriving instance Eq (BindName Desugar)
-deriving instance Ord (BindName Parsed)
-deriving instance Ord (BindName Desugar)
-deriving instance Show (BindName Parsed)
-deriving instance Show (BindName Desugar)
+deriving instance Eq (TypeName h)
+deriving instance Ord (TypeName h)
+deriving instance Show (TypeName h)
+deriving instance Eq (BindName m)
+deriving instance Ord (BindName m)
+deriving instance Show (BindName m)
 
 instance Read (TypeName HDefault) where
     readPrec = do
@@ -87,7 +81,7 @@ type DefaultTypeEnv m = M.Map UserType (TypeExp m HDefault)
 type WHNFTypeEnv m = M.Map UserType (TypeExp m WHNF)
 data Primitive = PObject | PString | PNumber | PInt | PArray | PBool | PNull
     deriving(Eq,Ord,Show)
-type TypeExtension mode = M.Map FieldName (TypeExp mode HDefault)
+type TypeExtension mode = M.Map (Field (BindName mode)) (TypeExp mode HDefault)
 
 newtype Exp mode = Exp (ExpF mode (LocationExp mode))
 
@@ -97,7 +91,7 @@ deriving instance Show (Exp Desugar)
 deriving instance Eq (Exp Parsed)
 deriving instance Ord (Exp Parsed)
 deriving instance Show (Exp Parsed)
-type LocationExp mode = LocationF Root (Exp mode)
+type LocationExp mode = LocationF (Root RootAny) (Exp mode)
 type TypeRefine mode = [ (Op, Exp mode)]
 
 evalTypeEnv :: DefaultTypeEnv Desugar -> WHNFTypeEnv Desugar

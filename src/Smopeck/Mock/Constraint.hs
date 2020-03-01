@@ -38,7 +38,7 @@ type HashTable k v = H.BasicHashTable k v
 type SolveM a = ReaderT Context IO a
 
 data Context = Context {
-  assignment :: HashTable Location (Either TypeExp Value),
+  assignment :: HashTable ALocation (Either TypeExp Value),
   typeEnv    :: TypeEnv,
   randState  :: GenIO
 }
@@ -70,8 +70,8 @@ chooseShape ty = do
   idx <- uniformR (0, length cands - 1) gen
   pure $ cands !! idx
 
-extract :: Location -> SolveM JSON.Value
-extract loc = evalL loc >>= \case
+extract :: ALocation -> SolveM JSON.Value
+extract loc = evalL loc (castRoot loc) >>= \case
   VBool b -> pure $ JSON.Bool  b
   VNumber n -> pure $ JSON.Number n
   VNull -> pure $ JSON.Null
@@ -98,52 +98,55 @@ mockJson env ty = do
         extract root
 
 
-evalL :: Location -> SolveM Value
-evalL loc = do
-  tbl <- asks assignment
-  liftIO (H.lookup tbl loc) >>= \case
-    Just (Right v) -> pure v
-    Just (Left ty) -> do
-      v <- evalT loc ty
-      liftIO (H.insert tbl loc (Right v))
-      pure v
-    Nothing -> do
-      evalL (parent loc)
-      evalL loc
+evalL :: ALocation -> Location -> SolveM Value
+evalL base loc' =
+  case resolve base loc' of
+    Right i -> pure $ VNumber (fromIntegral i)
+    Left loc ->  do
+      tbl <- asks assignment
+      liftIO (H.lookup tbl loc) >>= \case
+        Just (Right v) -> pure v
+        Just (Left ty) -> do
+          v <- evalT loc ty
+          liftIO (H.insert tbl loc (Right v))
+          pure v
+        Nothing -> do
+          evalL base (parent loc')
+          evalL base loc'
 
-evalT :: Location -> TypeExp -> SolveM Value
+evalT :: ALocation -> TypeExp -> SolveM Value
 evalT loc ty = do
   tyF <- chooseShape ty
   case T.typeExpName tyF of
     T.Prim T.PNumber -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp loc e >>= deref loc))
       v <- genInstance (foldr LMeet LTop predicates)
       pure (VNumber (fromFloatDigits (v :: Double)))
     T.Prim T.PInt -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp loc e >>= deref loc))
       v <- genInstance (foldr LMeet LTop predicates)
       pure (VNumber (fromIntegral (v::Int)))
     T.Prim T.PString -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp loc e >>= deref loc))
       (Equality v) <- genInstance (foldr LMeet LTop predicates)
       pure (VString v)
     T.Prim T.PBool -> do
       predicates <-
         T.typeExpRef tyF
-          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp e >>= deref))
+          & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp loc e >>= deref loc))
       (Equality v) <- genInstance (foldr LMeet LTop predicates)
       pure (VBool v)
     T.Prim T.PNull -> pure VNull
     T.Prim T.PObject -> do
       let exts = T.typeExpExt tyF
-          fields = M.keysSet exts
-      forM_ (M.toList exts) $ \(field, tyExp) -> do
+          fields = S.fromList [ field | FieldString field <- S.toList $ M.keysSet exts ]
+      forM_ (M.toList exts) $ \(FieldString field, tyExp) -> do
         env <- asks typeEnv
         let tyExp' = T.evalTypeExp env tyExp
             loc' = loc `Field` field
@@ -153,35 +156,35 @@ evalT loc ty = do
     T.Prim T.PArray -> do
       env <- asks typeEnv
       let exts = T.typeExpExt tyF
-          lenTy = T.evalTypeExp env (exts M.! "length")
+          lenTy = T.evalTypeExp env (exts M.! FieldString "length")
           lenLoc = loc `Field` "length"
       VNumber len <- evalT (loc `Field` "length") lenTy
       tbl <- asks assignment
       liftIO (H.insert tbl lenLoc (Right (VNumber len)))
       forM_ [0..floor len - 1] $ \i -> do
-        let getTy = T.evalTypeExp env (exts M.! "get")
+        let getTy = T.evalTypeExp env (exts M.! FieldIndex T.BindDebrujin)
             getLoc = loc `Get` i
         liftIO (H.insert tbl getLoc (Left getTy))
       pure VArray
 
 
-evalNumber :: Exp -> SolveM Scientific
-evalNumber e = toNumber <$> (evalExp e >>= deref)
+evalNumber :: ALocation -> Exp -> SolveM Scientific
+evalNumber base e = toNumber <$> (evalExp base e >>= deref base)
 
-deref :: Either Location (Literal Desugar) -> SolveM (Literal Desugar)
-deref (Right l) = pure l
-deref (Left x)  = toLiteral <$> evalL x
+deref :: ALocation -> Either Location (Literal Desugar) -> SolveM (Literal Desugar)
+deref _ (Right l)   = pure l
+deref base (Left x) = toLiteral <$> evalL base x
 
-evalExp :: Exp -> SolveM (Either Location (Literal Desugar))
-evalExp (T.Exp e) = go e
+evalExp :: ALocation -> Exp -> SolveM (Either Location (Literal Desugar))
+evalExp base (T.Exp e) = go e
   where
   go (Literal l)   = pure (Right l)
-  go (Var x)       = Left <$> traverse (fmap floor . evalNumber) x
+  go (Var x)       = Left <$> traverse (fmap floor . evalNumber base) x
   go (App op args) = Right . Exp.interpret op <$> mapM f args
     where
       f e = go e >>= \case
         Right l -> pure l
-        Left x -> toLiteral <$> evalL x
+        Left x -> toLiteral <$> evalL base x
 
 toLiteral :: Value -> Literal Desugar
 toLiteral (VBool b)   = LBool b

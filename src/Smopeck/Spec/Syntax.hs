@@ -1,9 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 module Smopeck.Spec.Syntax(
-    TopLevelDef(..),
+    TopLevelDef(..), Field(..), TypeExp.BindName(..),
     Route, Method, VarName, UserType, TypeExp, TypeEnv, Primitive,
-    TypeExtension, Exp, TypeRefine, FieldName,
+    TypeExtension, Exp(..), TypeRefine,
     module Smopeck.Spec.Exp,
+    module Smopeck.Mock.Location,
     fTypeExp
 )  where
 
@@ -29,7 +30,7 @@ type TypeExp = TypeExp.TypeExp Parsed TypeExp.HDefault
 type TypeEnv = TypeExp.DefaultTypeEnv Parsed
 type Primitive = TypeExp.Primitive
 
-type TypeExtension = [(UserType, TypeExp) ]
+type TypeExtension = [(Field (TypeExp.BindName Parsed), TypeExp) ]
 type Exp = TypeExp.Exp Parsed
 type TypeRefine = TypeExp.TypeRefine Parsed
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 module Smopeck.Spec.Validator(
     validateJson
     , Env
@@ -11,7 +12,7 @@ import           Data.Scientific
 import           Data.Text
 import           Smopeck.Spec.Lattice
 import           Smopeck.Spec.Syntax
-import           Smopeck.Spec.TypeExp (Primitive (..), TypeName (..),
+import           Smopeck.Spec.TypeExp (BindName, Primitive (..), TypeName (..),
                                        typeExpExt, typeExpName, typeExpRef)
 
 type Env = M.Map VarName Value
@@ -37,6 +38,6 @@ validateJson tyEnv env = go
     matchNumber _ _ = pure () -- to be implemented
     matchBool :: Bool -> TypeRefine -> Except String ()
     matchBool _ _ = pure ()
-    matchObject :: Object -> M.Map FieldName TypeExp -> TypeRefine -> Except String ()
+    matchObject :: Object -> M.Map (Field (BindName Parsed)) TypeExp -> TypeRefine -> Except String ()
     matchObject _ _ _ = pure () -- to be implemented
 

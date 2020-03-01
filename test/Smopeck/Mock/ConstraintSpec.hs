@@ -29,7 +29,7 @@ spec =
                 tySize = LElem (TypeExpF (Prim PInt) BindDebrujin  M.empty [(Gt, Exp $ Literal (LNumber 0)), (Lte, Exp $ Literal (LNumber 10))])
                 tyStr = LElem (TypeExpF (Prim PString) BindDebrujin  M.empty [(Eq, Exp $ Literal $ LString "fizz")])
                     `LJoin` LElem (TypeExpF (Prim PString) BindDebrujin  M.empty [(Eq, Exp $ Literal $ LString "buzz")])
-                ty = LElem (TypeExpF (Prim PObject) BindDebrujin  (M.fromList [("hoge", tyInt), ("fuga", tyStr)])[])
-                ty2 = LElem (TypeExpF (Prim PArray) BindDebrujin (M.fromList [("length", tySize), ("get", ty)]) [])
+                ty = LElem (TypeExpF (Prim PObject) BindDebrujin  (M.fromList [(FieldString "hoge", tyInt), (FieldString "fuga", tyStr)])[])
+                ty2 = LElem (TypeExpF (Prim PArray) BindDebrujin (M.fromList [(FieldString "length", tySize), (FieldIndex BindDebrujin, ty)]) [])
             v <- mockJson M.empty ty2
             print $ v

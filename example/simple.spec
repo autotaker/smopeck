@@ -1,7 +1,12 @@
-type Main = Object {
+type Main = Object @obj {
     intField: Int,
+    intField2: Int [ . = obj.intField ],
     numberField: Number,
     stringField: String,
     booleanField: Bool,
-    nullField: Null
+    nullField: Null,
+    arrayField: Array {
+        length: Int,
+        get(i): Int [ . = i ]
+    }
 }

@@ -19,6 +19,10 @@ tokens :-
   <0> "="                                   { token $ \_ _ -> Eq }
   <0> "<"                                   { token $ \_ _ -> Lt }
   <0> ">"                                   { token $ \_ _ -> Gt }
+  <0> "+"                                   { token $ \_ _ -> Add }
+  <0> "-"                                   { token $ \_ _ -> Sub }
+  <0> "*"                                   { token $ \_ _ -> Mul }
+  <0> "/"                                   { token $ \_ _ -> Div }
   <0> "("                                   { token $ \_ _ -> Lpar }
   <0> ")"                                   { token $ \_ _ -> Rpar }
   <0> "{"                                   { token $ \_ _ -> Lbra }
@@ -28,6 +32,7 @@ tokens :-
   <0> ":"                                   { token $ \_ _ -> Colon }
   <0> ","                                   { token $ \_ _ -> Comma }
   <0> \.                                    { token $ \_ _ -> Dot }
+  <0> "@"                                   { token $ \_ _ -> As }
   <0> \#                                    { token $ \_ _ -> Hash }
   <0> \"                                    { begin dqstr }
   <dqstr> \\[\" \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
@@ -43,8 +48,10 @@ data Token =
   | Lbra | Rbra
   | Lt | Gt
   | Lsq | Rsq
+  | Add | Sub | Mul | Div
   | Colon
   | Comma
+  | As
   | Hash | Dot
   | DQString String
   | SQString String

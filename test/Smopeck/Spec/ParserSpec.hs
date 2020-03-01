@@ -17,7 +17,7 @@ spec =
             runLexerMock parse tokens `shouldBe` Right [TypeDef "Sample" (fTypeExp "String" "." [] [])]
         it "parse type synonym def" $ do
             let tokens = [Type, UpperId "Sample", Eq, UpperId "Json", Lbra, LowerId "name" , Colon, UpperId "String", Rbra]
-            runLexerMock parse tokens `shouldBe` Right [TypeDef "Sample" (fTypeExp "Json" "." ([("name", fTypeExp "String" "." [] [])]) [])]
+            runLexerMock parse tokens `shouldBe` Right [TypeDef "Sample" (fTypeExp "Json" "." ([(FieldString "name", fTypeExp "String" "." [] [])]) [])]
 
         it "parse empty endpoint def" $ do
             let tokens = [Endpoint, DQString "/", UpperId "GET", Lbra, Rbra]
