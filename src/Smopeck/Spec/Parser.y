@@ -134,12 +134,15 @@ Literal : dqLiteral { LDQString $1 }
 {
 -- Footer
 
-data Lexer a = Lex (Token -> a) | Error String
+data Lexer a = Lex (Token -> a) | Error String | GetPos (AlexPosn -> a)
     deriving(Functor)
 
 runLexer :: Free Lexer a -> Alex a
 runLexer (Pure a) = pure a
 runLexer (Free (Lex f)) = alexMonadScan >>= runLexer . f
+runLexer (Free (GetPos f)) = do
+    (pos,_,_,_) <- alexGetInput
+    runLexer $ f pos
 runLexer (Free (Error err)) = alexError err
 
 runLexerMock :: Free Lexer a -> [Token] -> Either String a
@@ -152,6 +155,8 @@ lexerWrap :: (Token -> Free Lexer a) -> Free Lexer a
 lexerWrap f = Free (Lex f)
 
 parseError :: Token -> Free Lexer a 
-parseError token = Free (Error ("unexpected token:" ++ show token))
+parseError token = 
+    Free $ GetPos $ \pos ->
+        Free (Error ("unexpected token:" ++ show token ++ " at " ++ show pos))
 
 }
