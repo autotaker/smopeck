@@ -97,7 +97,7 @@ type TypeRefine mode = [ (Op, Exp mode)]
 evalTypeEnv :: DefaultTypeEnv Desugar -> WHNFTypeEnv Desugar
 evalTypeEnv env = env'
     where
-    env' = foldl' (\acc v ->
+    env' = foldr (\v acc ->
         let (def, tyName, _) = idx v
             def' = evalTypeExp acc def in
         M.insert tyName def' acc) M.empty (topSort graph)
@@ -124,7 +124,7 @@ evalTypeExp env tyExp =
             where
             typeDef = case M.lookup userType env of
                 Just v  -> v
-                Nothing -> error $ "undefined or cycle type: " ++ userType
+                Nothing -> error $ "undefined or cycle type: " ++ userType ++ " env: " ++ show env
             ext = typeExpExt tyExp
             ref = typeExpRef tyExp
             bindName = typeExpBind tyExp

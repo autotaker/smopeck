@@ -7,15 +7,18 @@ type RequestHeader = Object
 type RequestBody = Object 
 
 type ResponseStatus = Object {
-    code: Int,
+    code: Int [ . >= 100, . < 600 ],
     reason: String
 }
 
 type ResponseHeader = Object 
-type ResponseBody = JsonResponse | HtmlResponse
-type HtmlReponse = String
-type JsonResponse = Object
-
+type ResponseBody = String
+type JsonResponse = Response {
+    header: ResponseHeader {
+        contentType : String [ . = 'application/json' ]
+    },
+    body: Object
+}
 type Response = Object {
     status: ResponseStatus,
     header: ResponseHeader,
@@ -24,7 +27,7 @@ type Response = Object {
 
 type Endpoint = Object {
     request: Request,
-    response: Response
+    response: JsonResponse
 }
 
 type Main = Endpoint
