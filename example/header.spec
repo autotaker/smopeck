@@ -15,7 +15,7 @@ type ResponseHeader = Object
 type ResponseBody = String
 type JsonResponse = Response {
     header: ResponseHeader {
-        contentType : String [ . = 'application/json' ]
+        'Content-Type' : String [ . = 'application/json' ]
     },
     body: Object
 }

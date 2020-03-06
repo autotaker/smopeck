@@ -107,6 +107,8 @@ CompOp : '=' { Eq }
        | '>=' { Gte }
 
 Field : lower               { FieldString $1 }
+      | upper               { FieldString $1 }
+      | sqLiteral           { FieldString $1 }
       | lower '(' lower ')' { FieldIndex (BindName $3) }
 FieldExp : lower             { FieldString $1 }
          | lower '(' Exp ')' { FieldIndex $3 }
