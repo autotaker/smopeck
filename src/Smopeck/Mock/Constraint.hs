@@ -8,11 +8,13 @@ import qualified Data.Aeson              as JSON
 import           Data.Bifunctor
 import           Data.Foldable
 import           Data.Function
+import qualified Data.HashMap.Strict     as HM
 import qualified Data.HashTable.IO       as H
 import qualified Data.Map                as M
 import           Data.Scientific
 import qualified Data.Set                as S
 import qualified Data.Text               as T
+import qualified Data.Vector             as V
 import           Smopeck.Logic.Equality
 import           Smopeck.Logic.Model
 import           Smopeck.Logic.Number
@@ -87,15 +89,44 @@ extract loc = evalL loc (castRoot loc) >>= \case
     pure $ JSON.toJSON es
 
 mockJson :: TypeEnv -> TypeExp -> IO JSON.Value
-mockJson env ty = do
-  ctx <- initContext env
-  runReaderT doit ctx
+mockJson env ty = initContext env >>= mockJsonWithContext env ty
+
+mockJsonWithContext :: TypeEnv -> TypeExp -> Context -> IO JSON.Value
+mockJsonWithContext env ty = runReaderT doit
     where
-      root = Root (Absolute "it")
+      root = Root (Absolute "")
       doit = do
         tbl <- asks assignment
         liftIO $ H.insert tbl root (Left ty)
         extract root
+
+mockJsonWithEnv :: TypeEnv -> M.Map String JSON.Value -> TypeExp -> IO JSON.Value
+mockJsonWithEnv env venv ty = do
+  ctx <- initContext env
+  let insertValue k v = H.insert (assignment ctx) k (Right v)
+      insert key (JSON.Object obj) = do
+        let keys = map T.unpack $ HM.keys obj
+        insertValue key $ VObject $ S.fromList keys
+        forM_ (HM.toList obj)
+          $ uncurry $ insert . Field key . T.unpack
+      insert key (JSON.Array arr) = do
+        let size = V.length arr
+        insertValue (key `Field` "length")
+          $ VNumber $ fromIntegral size
+        V.imapM_ (insert . Get key) arr
+      insert key (JSON.Number n) = insertValue key $ VNumber n
+      insert key (JSON.Bool b) = insertValue key $ VBool b
+      insert key (JSON.String s) =
+        insertValue key $ VString (T.unpack s)
+      insert key JSON.Null = insertValue key VNull
+
+  forM_ (M.assocs venv)
+   $ uncurry $ insert . Root . Absolute
+  mockJsonWithContext env ty ctx
+
+
+
+
 
 
 evalL :: ALocation -> Location -> SolveM Value

@@ -58,6 +58,8 @@ library
         bytestring -any,
         scientific -any,
         hashable -any,
+        unordered-containers -any,
+        vector -any,
         primitive -any
 
 executable smopeck

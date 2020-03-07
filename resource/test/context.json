@@ -1,0 +1,11 @@
+{
+    "int": 1,
+    "bool": true,
+    "string": "string",
+    "null": null,
+    "array": [
+        1,
+        2,
+        3
+    ]
+}
