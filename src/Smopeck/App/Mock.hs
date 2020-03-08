@@ -6,14 +6,20 @@ module Smopeck.App.Mock
     , app
     )
 where
+import           Control.Lens
 import           Control.Monad.Except
 import qualified Data.Aeson                 as A
+import           Data.Aeson.Lens
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Function
+import qualified Data.HashMap.Strict        as HM
 import           Data.List                  (sortOn)
 import qualified Data.Map                   as M
+import           Data.Maybe
 import           Data.String                (fromString)
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 import           Network.HTTP.Types
 import           Network.Wai
 import qualified Network.Wai.Handler.Warp   as Warp
@@ -67,11 +73,25 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
             | otherwise = go defs
         responseOk tyReq tyRes = do
             v <- mockJson env tyRes
+            let code = fromMaybe 200 $ v ^? key "status" . key "code" . _Integral
+                status =
+                    maybe (toEnum code) (mkStatus code) $
+                        v ^? key "status"
+                            . key "reason"
+                            . _String
+                            . to T.encodeUtf8
+                headers =
+                        v ^.. key "header"
+                            . members
+                            . _String
+                            . withIndex
+                            . to (\(a,b) -> (fromString $ T.unpack a, T.encodeUtf8 b))
+                body = fromMaybe "null" $ v ^? key "body" . to A.encode
             respond
               $ responseLBS
-                    status200
-                    [("Content-Type", "application/json")]
-                    (A.encode v)
+                    status
+                    headers
+                    body
         responseNotFound =
             respond
               $ responseLBS status404 [("Content-Type", "text/plain")] "Not Found"
