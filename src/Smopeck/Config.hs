@@ -20,7 +20,8 @@ data TcpConfig = TcpConfig {
 } deriving(Eq, Ord, Show)
 
 data MockConfig = MockConfig {
-    listenAddr :: !TcpConfig
+    listenAddr      :: !TcpConfig,
+    mockSmopeckFile :: !FilePath
 } deriving(Eq, Ord, Show)
 
 data TestConfig = TestConfig {
@@ -35,7 +36,7 @@ data ProxyConfig = ProxyConfig
 mockOpts, testOpts, proxyOpts, opts :: ParserInfo Command
 mockOpts = info parser flags
   where
-    parser = Mock <$> (MockConfig <$> tcpConfigP)
+    parser = Mock <$> (MockConfig <$> tcpConfigP <*> strArgument (metavar "SPEC"))
     tcpConfigP =
         TcpConfig
             <$> strOption (long "host" <> short 'h' <> metavar "HOST")

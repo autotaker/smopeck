@@ -32,7 +32,11 @@ library
         Smopeck.Logic.Number
         Smopeck.Logic.Model
         Smopeck.Logic.Equality
+    other-modules:
+        Paths_smopeck
     hs-source-dirs: src 
+    data-files:
+        data/assets/prelude.spec
     default-language: Haskell2010
     build-tool-depends: 
         alex:alex , happy:happy
@@ -52,6 +56,8 @@ library
         http-types ^>=0.12.3,
         hashtables ^>= 1.2.3.4,
         mwc-random ^>= 0.14.0.0,
+        lens >= 4.4 && < 5,
+        lens-aeson ^>= 1.1,
         mtl -any,
         containers -any,
         text -any,

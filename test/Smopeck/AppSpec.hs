@@ -33,7 +33,7 @@ spec =
                 mockRunProxyApp = const $ assertFailure "should not be called"
             }
         it "execute MockApp" $ do
-            let config = MockConfig $ TcpConfig "localhost" 8888
+            let config = MockConfig (TcpConfig "localhost" 8888) "example.spec"
                 mockService = mockServiceBase {
                     mockGetCommand = pure (Mock config),
                     mockRunMockApp = \conf -> conf `shouldBe` config
