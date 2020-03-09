@@ -18,5 +18,18 @@ endpoint "/hello" GET {
     response: JsonResponse {
         body: String [ . = 'hello world!' ]
     }
+}
 
+endpoint "/param" GET {
+    request: Request {
+        param: Object {
+            name: String
+        }
+    },
+    response: JsonResponse {
+        body: Object {
+            message: String [ . = 'hello: ' + request.param.name ],
+            secret: String
+        }     
+    }
 }

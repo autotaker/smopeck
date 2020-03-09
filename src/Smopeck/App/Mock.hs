@@ -12,6 +12,7 @@ import qualified Data.Aeson                 as A
 import           Data.Aeson.Lens
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.CaseInsensitive       as CI
 import           Data.Function
 import qualified Data.HashMap.Strict        as HM
 import           Data.List                  (sortOn)
@@ -72,7 +73,12 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
             | match route method = responseOk tyReq tyRes
             | otherwise = go defs
         responseOk tyReq tyRes = do
-            v <- mockJson env tyRes
+            let reqHeaders = A.object [ T.decodeUtf8 (CI.original key) A..= T.decodeUtf8 val | (key, val) <- requestHeaders req ]
+                param = A.object [ key A..= mvalue | (key, mvalue) <- queryToQueryText $ queryString req ]
+                request = A.object [ "header" A..= reqHeaders
+                                   , "param" A..= param ]
+                valEnv = M.singleton "request" request
+            v <- mockJsonWithEnv env valEnv tyRes
             let code = fromMaybe 200 $ v ^? key "status" . key "code" . _Integral
                 status =
                     maybe (toEnum code) (mkStatus code) $
