@@ -70,6 +70,7 @@ validate tyEnv env = goLattice
                 forM_ [0..floor l - 1] $ \i -> do
                     let tyElt = typeExpExt M.! FieldIndex BindDebrujin
                     goLattice (it `Get` i) (evalTypeExp tyEnv tyElt)
+            (Prim ty, _) -> throwError $ "value " ++ show value ++ " is not " ++ show ty
 
     goRefs :: ALocation -> Literal Desugar -> TypeRefine Desugar -> Except String ()
     goRefs it lhs = mapM_ $ \(op, e) ->
