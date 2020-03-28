@@ -11,7 +11,7 @@ import           Smopeck.Spec.Validator
 import           Test.Hspec
 
 spec :: Spec
-spec =
+spec = do
     describe "Smopeck.Spec.Validator.validateJson" $ do
         it "String literal has String type" $ do
             let tyEnv = M.empty
@@ -58,3 +58,20 @@ spec =
                 ty = LJoin ty1 ty2
             runExcept (validateJson tyEnv env "a" ty) `shouldBe` Right ()
             runExcept (validateJson tyEnv env "b" ty) `shouldBe` Right ()
+    describe "Smopec.Spec.Validator.parseParam" $ do
+        it "can parse hoge as String" $
+            runExcept (parseParam "hoge" (fString [])) `shouldBe` Right (String "hoge")
+        it "can parse 1 as Int" $
+            runExcept (parseParam "1" (fInt [])) `shouldBe` Right (Number 1)
+        it "cannot parse float as Int" $
+            runExcept (parseParam "3.14" (fInt [])) `shouldSatisfy` isLeft
+        it "can parse float as Number" $
+            runExcept (parseParam "3.14" (fNumber [])) `shouldBe` Right (Number 3.14)
+        it "can parse true as Bool" $
+            runExcept (parseParam "truE" (fBool [])) `shouldBe` Right (Bool True)
+        it "can parse false as Bool" $
+            runExcept (parseParam "False" (fBool [])) `shouldBe` Right (Bool False)
+        it "can parse null as Null" $
+            runExcept (parseParam "nulL" fNull) `shouldBe` Right Null
+
+

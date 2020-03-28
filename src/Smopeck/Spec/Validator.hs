@@ -5,6 +5,7 @@ module Smopeck.Spec.Validator where
 import           Control.Applicative
 import           Control.Monad.Except
 import qualified Data.Aeson            as A
+import           Data.Char
 import qualified Data.HashMap.Strict   as HM
 import qualified Data.Map              as M
 import           Data.Scientific
@@ -16,6 +17,8 @@ import           Smopeck.Mock.Value
 import           Smopeck.Spec.Exp
 import           Smopeck.Spec.Lattice
 import           Smopeck.Spec.TypeExp
+import           Text.Read
+
 
 validateJson :: WHNFTypeEnv Desugar -> M.Map String A.Value
                 -> String -> TypeExp Desugar WHNF -> Except String ()
@@ -80,6 +83,50 @@ validate tyEnv env = goLattice
                 "expected " ++ show it ++ show op ++ show e ++ "\n"
                 ++ "but found" ++ show lhs ++ show op ++ show rhs
 
+parseParam :: String -> TypeExp Desugar WHNF -> Except String A.Value
+parseParam val = cata CataJoin {
+        fJBot = throwError "void type",
+        fJElem = go,
+        fJJoin = (<|>)
+    }
+    where
+    go :: TypeExpF Desugar WHNF -> Except String A.Value
+    go TypeExpF{..} =
+        case typeExpName of
+            Prim PInt -> do
+                n <- ExceptT $ pure $ fmap fromInteger $ readEither val
+                goRefs (LNumber n) typeExpRef
+                pure $ A.Number n
+            Prim PNumber -> do
+                n <- ExceptT $ pure $ readEither val
+                goRefs (LNumber n) typeExpRef
+                pure $ A.Number n
+            Prim PString -> do
+                goRefs (LString val) typeExpRef
+                pure $ A.String $ T.pack val
+            Prim PBool -> do
+                b <- case map toLower val of
+                    "true"  -> pure True
+                    "false" -> pure False
+                    _       -> throwError $ "not Boolean: " ++ val
+                goRefs (LBool b) typeExpRef
+                pure $ A.Bool b
+            Prim PNull -> do
+                case map toLower val of
+                    "null" -> pure ()
+                    ""     -> pure ()
+                    _      -> throwError $ "not Null: " ++ val
+                pure $ A.Null
+            Prim PArray -> error "Array is not primitive"
+            Prim PObject -> error "Object is not primitive"
+
+
+    goRefs :: Literal Desugar -> TypeRefine Desugar -> Except String ()
+    goRefs lhs = mapM_ $ \(op, e) -> do
+        let rhs = evalExp M.empty (Root (Absolute "")) e
+        unless (interpret op [lhs, rhs] == LBool True) $
+            throwError $
+                "not match " ++ show (lhs, op, rhs)
 
 evalExp :: M.Map ALocation Value -> ALocation -> Exp Desugar -> Literal Desugar
 evalExp env base (Exp e) = go e
