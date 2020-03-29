@@ -21,6 +21,7 @@ import           Data.Maybe
 import           Data.String                (fromString)
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
+import           Debug.Trace
 import           Network.HTTP.Types
 import           Network.Wai
 import qualified Network.Wai.Handler.Warp   as Warp
@@ -118,11 +119,22 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
             respond
               $ responseLBS status400  [("Content-Type", "text/plain")] $ LBS.pack err
 
-
         match route method tyParam = do
-                pathParam <- pathMatch
-                guard methodMatch
-                l <- forM (M.assocs queryExt) $ \(FieldString field, ty) -> do
+                pathParam <- matchPath
+                guard matchMethod
+                queryParam <- matchQuery
+                pure $ A.object [ "query" A..= queryParam
+                                , "path" A..= pathParam ]
+            where
+            param = M.fromList [ (key , mvalue) | (key, mvalue) <- queryToQueryText $ queryString req ]
+            LElem TypeExpF{ typeExpExt = ext } = tyParam
+            LElem TypeExpF{ typeExpExt = queryExt } = evalTypeExp env $ ext  M.! FieldString "query"
+            LElem TypeExpF{ typeExpExt = pathExt } = evalTypeExp env $ ext  M.! FieldString "path"
+            matchMethod = requestMethod req == method
+            matchQuery =
+                fmap A.object
+                  $ forM (M.assocs queryExt)
+                  $ \(FieldString field, ty) -> do
                     let ty' = evalTypeExp env ty
                     mv <- M.lookup (T.pack field) param
                     v <- case mv of
@@ -130,16 +142,9 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
                         Just s  -> pure $ T.unpack s
                     case runExcept (parseParam v ty') of
                         Left _  -> Nothing
-                        Right v -> pure $ (T.pack field) A..= v
-                pure $ A.object [ "query" A..= A.object l
-                                , "path" A..= pathParam ]
-            where
-            param = M.fromList [ (key , mvalue) | (key, mvalue) <- queryToQueryText $ queryString req ]
-            path = rawPathInfo req
-            LElem TypeExpF{ typeExpExt = ext } = tyParam
-            LElem TypeExpF{ typeExpExt = queryExt } = evalTypeExp env $ ext  M.! FieldString "query"
-            LElem TypeExpF{ typeExpExt = pathExt } = evalTypeExp env $ ext  M.! FieldString "path"
-            pathMatch = do
+                        Right v -> pure $ T.pack field A..= v
+
+            matchPath = do
                 let path = pathInfo req
                     routeSeq = splitRoute route
                     go (Elem s:rest) (txt:path) =
@@ -154,16 +159,17 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
                     go [] [] = pure []
                     go _ _ = Nothing
                 A.object <$> go routeSeq path
-            methodMatch = requestMethod req == method
 
 data RouteElem = Elem String | Param String
+    deriving (Show)
 splitRoute :: Route -> [RouteElem]
-splitRoute = unfoldr $ \case
+splitRoute "/" = []
+splitRoute route = unfoldr (\case
     '/':':':s ->
         let (param, s') = span (/= '/') s in
         Just (Param param, s')
     '/':s ->
         let (e, s') = span (/= '/') s in
         Just (Elem e, s')
-    [] -> Nothing
+    [] -> Nothing) route
 

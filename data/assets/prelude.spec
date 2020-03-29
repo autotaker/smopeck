@@ -15,10 +15,11 @@ type RequestBody = Object | Null
 
 type ResponseHeader = Object 
 type ResponseBody = String
+type JsonResponseHeader = ResponseHeader {
+    'Content-Type' : String [ . = 'application/json' ]
+}
 type JsonResponse = Response {
-    header: ResponseHeader {
-        'Content-Type' : String [ . = 'application/json' ]
-    },
+    header: JsonResponseHeader,
     body: Object
 }
 type Response = Object {

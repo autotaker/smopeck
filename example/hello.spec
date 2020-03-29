@@ -68,17 +68,29 @@ endpoint "/post" POST {
     }
 }
 
-endpoint "/user/:id/profile" GET {
+type Follower = Object {
+    userId : String,
+    age: Int [ . > 0, . < 100 ]
+}
+type Pos = Int [ . > 0]
+
+endpoint "/user/:userId/followers/list" GET {
     parameter: Parameter {
         path: Object {
-            id : Int
+            userId : String
+        },
+        query: Object {
+            pageNum : Pos,
+            pageSize : Pos [ . <= 100 ]
         }
     },
     response: JsonResponse {
         body: Object {
-            id : Int [ . = parameter.path.id ],
-            name : String,
-            email : String
+            userId : String [ . = parameter.path.userId ],
+            followers : Array {
+                get(i) : Follower,
+                length: Pos [ . <= parameter.query.pageSize ]
+            }
         }
     }
 }
