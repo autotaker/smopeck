@@ -15,7 +15,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.CaseInsensitive       as CI
 import           Data.Function
 import qualified Data.HashMap.Strict        as HM
-import           Data.List                  (sortOn)
+import           Data.List                  (sortOn, unfoldr)
 import qualified Data.Map                   as M
 import           Data.Maybe
 import           Data.String                (fromString)
@@ -120,7 +120,7 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
 
 
         match route method tyParam = do
-                guard pathMatch
+                pathParam <- pathMatch
                 guard methodMatch
                 l <- forM (M.assocs queryExt) $ \(FieldString field, ty) -> do
                     let ty' = evalTypeExp env ty
@@ -131,13 +131,39 @@ app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
                     case runExcept (parseParam v ty') of
                         Left _  -> Nothing
                         Right v -> pure $ (T.pack field) A..= v
-                pure $ A.object [ "query" A..= A.object l ]
+                pure $ A.object [ "query" A..= A.object l
+                                , "path" A..= pathParam ]
             where
             param = M.fromList [ (key , mvalue) | (key, mvalue) <- queryToQueryText $ queryString req ]
             path = rawPathInfo req
             LElem TypeExpF{ typeExpExt = ext } = tyParam
             LElem TypeExpF{ typeExpExt = queryExt } = evalTypeExp env $ ext  M.! FieldString "query"
-            pathMatch = BS.pack route `BS.isPrefixOf` path
+            LElem TypeExpF{ typeExpExt = pathExt } = evalTypeExp env $ ext  M.! FieldString "path"
+            pathMatch = do
+                let path = pathInfo req
+                    routeSeq = splitRoute route
+                    go (Elem s:rest) (txt:path) =
+                        guard (T.pack s == txt) >>
+                        go rest path
+                    go (Param p:rest) (txt:path) = do
+                        let ty = evalTypeExp env $ pathExt M.! FieldString p
+                        pair <- case runExcept (parseParam (T.unpack txt) ty) of
+                            Left _  -> Nothing
+                            Right v -> pure $ T.pack p A..= v
+                        (pair:) <$> go rest path
+                    go [] [] = pure []
+                    go _ _ = Nothing
+                A.object <$> go routeSeq path
             methodMatch = requestMethod req == method
 
+data RouteElem = Elem String | Param String
+splitRoute :: Route -> [RouteElem]
+splitRoute = unfoldr $ \case
+    '/':':':s ->
+        let (param, s') = span (/= '/') s in
+        Just (Param param, s')
+    '/':s ->
+        let (e, s') = span (/= '/') s in
+        Just (Elem e, s')
+    [] -> Nothing
 

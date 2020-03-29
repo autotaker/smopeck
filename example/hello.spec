@@ -66,5 +66,19 @@ endpoint "/post" POST {
             message: String [ . = 'hello: ' + request.body.message ]
         }
     }
+}
 
+endpoint "/user/:id/profile" GET {
+    parameter: Parameter {
+        path: Object {
+            id : Int
+        }
+    },
+    response: JsonResponse {
+        body: Object {
+            id : Int [ . = parameter.path.id ],
+            name : String,
+            email : String
+        }
+    }
 }
