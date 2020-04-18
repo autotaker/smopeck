@@ -34,6 +34,7 @@ library
         Smopeck.Logic.Number
         Smopeck.Logic.Model
         Smopeck.Logic.Equality
+        Smopeck.Logic.Regex
     other-modules:
         Paths_smopeck
     hs-source-dirs: src 
@@ -58,6 +59,8 @@ library
         mwc-random ^>= 0.14.0.0,
         lens >= 4.4 && < 5,
         lens-aeson ^>= 1.1,
+        regex-tdfa ^>= 1.3.1.0,
+        pretty ^>= 1.1.3.6,
         mtl -any,
         containers -any,
         text -any,
