@@ -1,15 +1,22 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE ExplicitForAll      #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Smopeck.Logic.Regex where
 
 import           Control.Arrow                  (first, second)
+import           Control.Monad.Primitive
 import           Control.Monad.State.Strict
-import           Data.Array
+import           Data.Array.Unboxed             as U
+import           Data.Char
 import qualified Data.IntMap.CharMap2           as CM
 import qualified Data.IntSet                    as IS
 import qualified Data.Map                       as M
 import qualified Data.Set                       as S
+import           System.Random.MWC
 import           Text.PrettyPrint.HughesPJClass as PP hiding (first)
 import           Text.Regex.TDFA
 import           Text.Regex.TDFA.Common
@@ -68,3 +75,42 @@ extractAutomaton Regex {..} = Automaton s0 delta
                     modify $ second $ (:) $ Node i (not $ null dt_win) charTrans defTrans
                     pure i
                 Testing' {} -> error "Testing' is not supported"
+
+type RouteTable = [UArray Int Bool]
+
+computeRouteTable :: Automaton -> RouteTable
+computeRouteTable automaton = iterate step arr0
+    where
+    arr0 = listArray bb (map nodeAccept $ elems $ nodes automaton)
+    bb = bounds (nodes automaton)
+    step :: UArray Int Bool -> UArray Int Bool
+    step arr = listArray bb (map update $ indices arr)
+        where
+        update i = arr ! nodeDefaultTrans || any (arr !) nodeCharTrans
+            where
+            Node{..} = nodes automaton ! i
+
+randomChoose :: PrimMonad f => Gen (PrimState f) -> [a] -> f a
+randomChoose st l = do
+    let n = length l
+    (l !!) <$> uniformR (0,n-1) st
+
+randomGenerate :: forall f. PrimMonad f => Gen (PrimState f) -> Automaton -> RouteTable -> Int -> f (Maybe String)
+randomGenerate st automaton routeTbl maxLen
+    | null lenCands = pure Nothing
+    | otherwise = Just <$> do
+        strLen <- randomChoose st lenCands
+        randomWalk strLen (initState automaton) (reverse $ take strLen routeTbl)
+  where
+    list = take maxLen routeTbl
+    lenCands = [ i | (i,arr) <- zip [0..maxLen-1] list, arr ! initState automaton ]
+    randomWalk :: Int -> Int -> RouteTable -> f String
+    randomWalk 0 !v _ = pure ""
+    randomWalk k v (arr:arrs) = do
+        let candsChar = filter ((arr !).snd) $ M.assocs nodeCharTrans
+            defaultOk = arr ! nodeDefaultTrans
+            candsAny = [ (ch, nodeDefaultTrans) | defaultOk, ch <- [chr 32..chr 126], M.notMember ch nodeCharTrans  ]
+            Node{..} = nodes automaton ! v
+        (ch, w) <- randomChoose st (candsChar ++ candsAny)
+        (ch:) <$> randomWalk (k-1) w arrs
+
