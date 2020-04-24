@@ -5,7 +5,7 @@ type Main = Object @obj {
     intField1: Pos,
     intField2: Pos,
     numberField: Number [ . > -obj.intField2, . < obj.intField1],
-    stringField: String,
+    stringField: String [ . =~ r'[0-9]{10}'],
     booleanField: Bool,
     nullField: Null,
     arrayField: Array @arr {

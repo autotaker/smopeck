@@ -18,6 +18,7 @@ import qualified Data.Vector             as V
 import           Smopeck.Logic.Equality
 import           Smopeck.Logic.Model
 import           Smopeck.Logic.Number
+import           Smopeck.Logic.Regex
 import           Smopeck.Mock.Dependency
 import           Smopeck.Mock.Location
 import           Smopeck.Mock.Value
@@ -165,7 +166,7 @@ evalT loc ty = do
       predicates <-
         T.typeExpRef tyF
           & mapM (\(op, e) -> LElem . (op, ) <$> (evalExp loc e >>= deref loc))
-      (Equality v) <- genInstance (foldr LMeet LTop predicates)
+      v <- genInstance (foldr LMeet LTop predicates)
       pure (VString v)
     T.Prim T.PBool -> do
       predicates <-

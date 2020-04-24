@@ -19,6 +19,7 @@ tokens :-
   <0> "|"                                   { token $ \_ _ -> Join }
   <0> "&"                                   { token $ \_ _ -> Meet }
   <0> "="                                   { token $ \_ _ -> Eq }
+  <0> "=~"                                  { token $ \_ _ -> Match }
   <0> "<"                                   { token $ \_ _ -> Lt }
   <0> ">"                                   { token $ \_ _ -> Gt }
   <0> "<="                                  { token $ \_ _ -> Lte }
@@ -44,15 +45,19 @@ tokens :-
   <dqstr> \"                                { (\_ _ -> DQString <$> flushStringValue) `andBegin` 0 }
   <dqstr> [^"]                              { \s len -> let [ch] = lexeme s len in pushChar ch >> alexMonadScan }
   <0> \'                                    { begin sqstr }
-  <sqtr> \\[\' \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
+  <sqstr> \\[\' \\ n r t]                   { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
   <sqstr> \'                                { (\_ _ -> SQString <$> flushStringValue) `andBegin` 0 }
   <sqstr> [^']                              { \s len -> let [ch] = lexeme s len in pushChar ch >> alexMonadScan }
+  <0> "r'"                                  { begin sqre }
+  <sqre> \\[\' \\ n r t]                    { \s len -> pushChar (unescape $ lexeme s len) >> alexMonadScan }
+  <sqre> \'                                 { (\_ _ -> SQRegex <$> flushStringValue) `andBegin` 0 }
+  <sqre> [^']                               { \s len -> let [ch] = lexeme s len in pushChar ch >> alexMonadScan }
 
 {
 data Token = 
     Type
   | Endpoint
-  | Eq | Join | Meet
+  | Eq | Join | Meet | Match
   | Lpar | Rpar
   | Lbra | Rbra
   | Lt | Gt | Lte | Gte
@@ -64,7 +69,7 @@ data Token =
   | Hash | Dot
   | DQString String
   | SQString String
-  | Regex String
+  | SQRegex String
   | Number Scientific
   | LowerId String
   | UpperId String

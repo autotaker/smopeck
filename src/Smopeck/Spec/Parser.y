@@ -6,7 +6,7 @@ module Smopeck.Spec.Parser(
     , runLexerMock
     , parse
 ) where
-import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte)
+import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte, Match)
 import qualified Smopeck.Spec.Lexer as L
 
 import Smopeck.Spec.Syntax
@@ -24,6 +24,7 @@ import Control.Monad.Free
     type     { Type }
     endpoint { Endpoint }
     '='      { L.Eq }
+    '=~'     { L.Match }
     '<'      { L.Lt }
     '>'      { L.Gt }
     '<='     { L.Lte }
@@ -49,6 +50,7 @@ import Control.Monad.Free
     number   { Number $$ }
     dqLiteral { DQString  $$ }
     sqLiteral { SQString  $$ }
+    sqRegex  { SQRegex $$ }
 
 %left '|'
 %left '&'
@@ -105,6 +107,7 @@ CompOp : '=' { Eq }
        | '>' { Gt }
        | '<=' { Lte }
        | '>=' { Gte }
+       | '=~' { Match }
 
 Field : lower               { FieldString $1 }
       | upper               { FieldString $1 }
@@ -131,6 +134,7 @@ ExpF
     | '-' ExpF %prec NEG { App Sub [$2] }
 Literal : dqLiteral { LDQString $1 }
         | sqLiteral { LString $1 }
+        | sqRegex   { LRegex $1 }
         | number    { LNumber $1 }
 
 {

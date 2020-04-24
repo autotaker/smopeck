@@ -3,7 +3,8 @@ module Smopeck.Spec.ParserSpec where
 
 import           Smopeck.Spec.Lexer
 import           Smopeck.Spec.Parser
-import           Smopeck.Spec.Syntax  hiding (Eq, Gt, Lt)
+import           Smopeck.Spec.Syntax  hiding (Eq, Gt, Lt, Match)
+import qualified Smopeck.Spec.Syntax  as Syntax
 import qualified Smopeck.Spec.TypeExp as T
 import           Test.Hspec
 
@@ -28,3 +29,8 @@ spec =
         it "parse empty endpoint def" $ do
             let tokens = [Endpoint, DQString "/", UpperId "GET", Lbra, Rbra]
             runLexerMock parse tokens `shouldBe` Right [EndpointDef "/" "GET" []]
+        it "parse regex match expression" $ do
+            -- type Sample = String [ . =~ r'hoge' ]
+            let tokens = [Type, UpperId "Sample", Eq, UpperId "String", Lsq, Dot, Match, SQRegex "[a-z]*", Rsq ]
+                expected = TypeDef "Sample" (fTypeExp "String" "." [] [ (Syntax.Match, T.Exp $ Literal $ LRegex "[a-z]*" )])
+            runLexerMock parse tokens `shouldBe` Right [expected]

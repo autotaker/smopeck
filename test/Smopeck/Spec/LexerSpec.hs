@@ -37,4 +37,9 @@ spec =
         it ("double quote escaping " ++ show "\\d") $
             runAlex "\" \\d \"" alexMonadScan `shouldBe` Right (DQString " \\d ")
 
+        it "lex match operator" $ do
+            let input = "'abracadabra' =~ r'[abcdr]*' "
+                expected = [SQString "abracadabra", Match, SQRegex "[abcdr]*" ]
+            parse input `shouldBe` Right expected
+
 

@@ -1,10 +1,11 @@
 {-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE ExplicitForAll      #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
 module Smopeck.Logic.Regex where
 
 import           Control.Arrow                  (first, second)
@@ -12,17 +13,20 @@ import           Control.Monad.Primitive
 import           Control.Monad.State.Strict
 import           Data.Array.Unboxed             as U
 import           Data.Char
+import           Data.Coerce
 import qualified Data.IntMap.CharMap2           as CM
 import qualified Data.IntSet                    as IS
+import           Data.List
 import qualified Data.Map                       as M
 import qualified Data.Set                       as S
+import           Data.String
+import           Smopeck.Logic.Model
+import           Smopeck.Spec.Exp               hiding (interpret)
 import           System.Random.MWC
 import           Text.PrettyPrint.HughesPJClass as PP hiding (first)
 import           Text.Regex.TDFA
 import           Text.Regex.TDFA.Common
 
-exampleRegex :: Regex
-exampleRegex = makeRegex ("(ab)*" :: String)
 
 data Node = Node {
     nodeId           :: !Int,
@@ -114,3 +118,55 @@ randomGenerate st automaton routeTbl maxLen
         (ch, w) <- randomChoose st (candsChar ++ candsAny)
         (ch:) <$> randomWalk (k-1) w arrs
 
+-- regex string
+newtype RString = RString String deriving(Eq,Ord,Show)
+instance IsString RString where
+    fromString = RString
+
+instance Model String where
+    data Atom String = SAny | SOneOf !(S.Set String) | SPtn RString
+    top = SAny
+    bot = SOneOf S.empty
+    join SAny _                       = SAny
+    join _ SAny                       = SAny
+    join (SOneOf xs) (SOneOf ys)      = SOneOf (S.union xs ys)
+    join (SOneOf xs) (SPtn regex) = SPtn $ joinR (regex:map escapeR (S.toList xs))
+    join (SPtn regex) (SOneOf xs) = SPtn $ joinR (regex:map escapeR (S.toList xs))
+    join (SPtn rx) (SPtn ry) = SPtn $ joinR [rx, ry]
+    meet SAny ys                  = ys
+    meet xs SAny                  = xs
+    meet (SOneOf xs) (SOneOf ys)  = SOneOf (S.intersection xs ys)
+    meet (SOneOf xs) (SPtn regex) = SOneOf (S.filter (`matchR` regex) xs)
+    meet (SPtn regex) (SOneOf xs) = SOneOf (S.filter (`matchR` regex) xs)
+    meet (SPtn _) (SPtn _)        = error "meet of two regex is not supported"
+    generate st SAny = generate st (SPtn ".*")
+    generate st (SOneOf xs)
+        | S.null xs = pure Nothing
+        | otherwise = do
+            i <- uniformR (0,S.size xs - 1) st
+            pure $ Just $! S.elemAt i xs
+    generate st (SPtn regex) = randomGenerate st automaton tbl 30
+        where
+        automaton = extractAutomaton $ compileR regex
+        tbl = computeRouteTable automaton
+    interpret Eq (LString v)   = SOneOf (S.singleton v)
+    interpret Match (LRegex s) = SPtn (RString s)
+
+joinR :: [RString] -> RString
+joinR = RString . intercalate "|" . coerce
+
+compileR :: RString -> Regex
+compileR (RString s) = makeRegexOpts blankCompOpt blankExecOpt s
+
+matchR :: String -> RString -> Bool
+matchR x (RString y) = x =~ ("^" ++ y ++ "$")
+
+escapeR :: String -> RString
+escapeR = RString . go
+    where
+    specials :: String
+    specials = "^.[$()|*+?{\\"
+    go [] = []
+    go (c:cs)
+        | c `elem` specials = '\\':c: go cs
+        | otherwise = c : go cs

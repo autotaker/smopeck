@@ -20,6 +20,15 @@ endpoint "/hello" GET {
     }
 }
 
+endpoint "/regex" GET {
+    response: JsonResponse {
+        body: Array {
+            length: Int [ . = 10 ],
+            get(i): String [ . =~ r'[a-z]{4}-[0-9]{5}' ]
+        }
+    }
+}
+
 endpoint "/param" GET {
     parameter: Parameter {
         query : Object {
