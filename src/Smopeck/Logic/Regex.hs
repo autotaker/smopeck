@@ -14,19 +14,23 @@ import           Control.Monad.State.Strict
 import           Data.Array.Unboxed             as U
 import           Data.Char
 import           Data.Coerce
+import           Data.Function
 import qualified Data.IntMap.CharMap2           as CM
 import qualified Data.IntSet                    as IS
 import           Data.List
 import qualified Data.Map                       as M
+import           Data.Maybe
 import qualified Data.Set                       as S
 import           Data.String
+import           Data.Tuple
+import           Debug.Trace
 import           Smopeck.Logic.Model
 import           Smopeck.Spec.Exp               hiding (interpret)
 import           Smopeck.Spec.RegexUtil
 import           System.Random.MWC
 import           Text.PrettyPrint.HughesPJClass as PP hiding (first)
 import           Text.Regex.TDFA
-import           Text.Regex.TDFA.Common
+import           Text.Regex.TDFA.Common         hiding (on)
 
 
 data Node = Node {
@@ -115,8 +119,13 @@ randomGenerate st automaton routeTbl maxLen
         let candsChar = filter ((arr !).snd) $ M.assocs nodeCharTrans
             defaultOk = arr ! nodeDefaultTrans
             candsAny = [ (ch, nodeDefaultTrans) | defaultOk, ch <- [chr 32..chr 126], M.notMember ch nodeCharTrans  ]
+            transGroup =
+                candsChar ++ candsAny
+                 & sortBy (compare `on` snd)
+                 & groupBy ((==) `on` snd)
             Node{..} = nodes automaton ! v
-        (ch, w) <- randomChoose st (candsChar ++ candsAny)
+        grp <- randomChoose st transGroup
+        (ch, w) <- randomChoose st grp
         (ch:) <$> randomWalk (k-1) w arrs
 
 instance Model String where
