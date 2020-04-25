@@ -29,6 +29,14 @@ endpoint "/regex" GET {
     }
 }
 
+endpoint "/regex/check" POST {
+    request: JsonRequest {
+        body: Object {
+            phone: String [ . =~ r'0[0-9]+-[0-9]+-[0-9]+']
+        }
+    }
+}
+
 endpoint "/param" GET {
     parameter: Parameter {
         query : Object {

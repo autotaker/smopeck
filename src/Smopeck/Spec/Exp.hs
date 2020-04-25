@@ -13,9 +13,11 @@ module Smopeck.Spec.Exp(
     Mode(..),
     Op(..)) where
 import           Control.Monad
-import qualified Data.Map        as M
+import           Data.Coerce
+import qualified Data.Map               as M
 import           Data.Scientific
-import qualified Data.Set        as S
+import qualified Data.Set               as S
+import           Smopeck.Spec.RegexUtil
 
 data ExpF (mode :: Mode) a = Literal !(Literal mode) | Var !a | App !Op [ExpF mode a]
     deriving (Functor)
@@ -80,6 +82,8 @@ interpret :: Op -> [Literal Desugar] -> Literal Desugar
 interpret Add [LNumber x, LNumber y] = LNumber $ x + y
 interpret Add [LString x, LString y] = LString $ x ++ y
 interpret Add [LRegex x, LRegex y] = LRegex $ x ++ y
+interpret Add [LString x, LRegex y] = LRegex $ coerce (escapeR x) ++ y
+interpret Add [LRegex x, LString y] = LRegex $ x ++ coerce (escapeR y)
 interpret Sub [LNumber x, LNumber y] = LNumber $ x - y
 interpret Sub [LNumber x] = LNumber $ -x
 interpret Mul [LNumber x, LNumber y] = LNumber $ x * y
@@ -89,6 +93,6 @@ interpret Lt [x, y] = LBool $ x < y
 interpret Gt [x, y] = LBool $ x > y
 interpret Lte [x, y] = LBool $ x <= y
 interpret Gte [x, y] = LBool $ x >= y
-interpret Match [x, LRegex s] = undefined
+interpret Match [LString x, LRegex s] = LBool $ matchR x (RString s)
 interpret op args =
     error $ "no interpretation for :" ++ show op ++ " " ++ show args

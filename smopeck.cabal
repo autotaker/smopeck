@@ -27,6 +27,7 @@ library
         Smopeck.Spec.Lexer
         Smopeck.Spec.Syntax
         Smopeck.Spec.Validator
+        Smopeck.Spec.RegexUtil
         Smopeck.Mock.Location
         Smopeck.Mock.Value
         Smopeck.Mock.Dependency
@@ -93,11 +94,11 @@ test-suite unit-test
         Smopeck.Spec.LexerSpec
         Smopeck.Spec.DesugarSpec
         Smopeck.Spec.ValidatorSpec
+        Smopeck.Spec.RegexUtilSpec
         Smopeck.Mock.LocationSpec
         Smopeck.Mock.DependencySpec
         Smopeck.Mock.ConstraintSpec
         Smopeck.Logic.NumberSpec
-        Smopeck.Logic.RegexSpec
     default-language: Haskell2010
     ghc-options: -Wall
     build-depends:

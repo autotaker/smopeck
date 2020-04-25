@@ -22,6 +22,7 @@ import qualified Data.Set                       as S
 import           Data.String
 import           Smopeck.Logic.Model
 import           Smopeck.Spec.Exp               hiding (interpret)
+import           Smopeck.Spec.RegexUtil
 import           System.Random.MWC
 import           Text.PrettyPrint.HughesPJClass as PP hiding (first)
 import           Text.Regex.TDFA
@@ -118,11 +119,6 @@ randomGenerate st automaton routeTbl maxLen
         (ch, w) <- randomChoose st (candsChar ++ candsAny)
         (ch:) <$> randomWalk (k-1) w arrs
 
--- regex string
-newtype RString = RString String deriving(Eq,Ord,Show)
-instance IsString RString where
-    fromString = RString
-
 instance Model String where
     data Atom String = SAny | SOneOf !(S.Set String) | SPtn RString
     top = SAny
@@ -151,22 +147,3 @@ instance Model String where
         tbl = computeRouteTable automaton
     interpret Eq (LString v)   = SOneOf (S.singleton v)
     interpret Match (LRegex s) = SPtn (RString s)
-
-joinR :: [RString] -> RString
-joinR = RString . intercalate "|" . coerce
-
-compileR :: RString -> Regex
-compileR (RString s) = makeRegexOpts blankCompOpt blankExecOpt s
-
-matchR :: String -> RString -> Bool
-matchR x (RString y) = x =~ ("^" ++ y ++ "$")
-
-escapeR :: String -> RString
-escapeR = RString . go
-    where
-    specials :: String
-    specials = "^.[$()|*+?{\\"
-    go [] = []
-    go (c:cs)
-        | c `elem` specials = '\\':c: go cs
-        | otherwise = c : go cs

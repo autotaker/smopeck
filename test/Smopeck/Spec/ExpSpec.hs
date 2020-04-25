@@ -55,3 +55,16 @@ spec =
             let env = M.fromList [ ]
                 expr = Var "x"
             eval env expr `shouldBe` Left "x"
+        it "abracadabara =~ [abcdr]+ == True" $ do
+            let lhs = LString "abracadabra"
+                rhs = LRegex "[abcdr]+"
+            interpret Match [lhs, rhs] `shouldBe` LBool True
+        it "abracadabara =~ [abc]+ == False" $ do
+            let lhs = LString "abracadabra"
+                rhs = LRegex "[abc]+"
+            interpret Match [lhs, rhs] `shouldBe` LBool False
+        it "'hoge[]' + r'fuga' == r'hoge\\[\\]fuga' " $ do
+            let lhs = LString "hoge[]"
+                rhs = LRegex "fuga"
+                expected = LRegex "hoge\\[]fuga"
+            interpret Add [lhs, rhs] `shouldBe` expected
