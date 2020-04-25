@@ -49,8 +49,11 @@ runApp MockConfig{ listenAddr = TcpConfig {..}, mockSmopeckFile = file } = do
     res <- runExceptT $ do
         preludeContent <- liftIO $ readFile prelude
         content <- liftIO $ readFile file :: ExceptT String IO String
-        defs <- ExceptT (pure $ runAlex (preludeContent ++ content) $ runLexer parse)
-        let typeEnv = M.fromList [ (tyName, def) | TypeDef tyName def <- defs ]
+        defsPrelude <- ExceptT (pure $ runAlex preludeContent $ runLexer parse)
+        defsUser <- ExceptT (pure $ runAlex content $ runLexer parse)
+
+        let defs = defsPrelude ++ defsUser
+            typeEnv = M.fromList [ (tyName, def) | TypeDef tyName def <- defs ]
                 & desugarTypeEnv
                 & evalTypeEnv
         let fType ext =
