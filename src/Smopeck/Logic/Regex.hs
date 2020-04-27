@@ -85,19 +85,39 @@ extractAutomaton Regex {..} = Automaton s0 delta
                     pure i
                 Testing' {} -> error "Testing' is not supported"
 
-type RouteTable = [UArray Int Bool]
+type RouteTable = [UArray Int Double]
+
+alphabet :: [Char]
+alphabet = [chr 32..chr 126]
 
 computeRouteTable :: Automaton -> RouteTable
 computeRouteTable automaton = iterate step arr0
     where
-    arr0 = listArray bb (map nodeAccept $ elems $ nodes automaton)
     bb = bounds (nodes automaton)
-    step :: UArray Int Bool -> UArray Int Bool
-    step arr = listArray bb (map update $ indices arr)
+    arr0 = automaton
+      & nodes
+      & elems
+      & map (\node -> if nodeAccept node then 1 else 0)
+      & listArray bb
+      & normalize
+    step :: UArray Int Double -> UArray Int Double
+    step arr = arr
+        & indices
+        & map update
+        & listArray bb
+        & normalize
         where
-        update i = arr ! nodeDefaultTrans || any (arr !) nodeCharTrans
+        update i = n
             where
             Node{..} = nodes automaton ! i
+            defaultAssocs = [ (ch,nodeDefaultTrans) | ch <- alphabet, M.notMember ch nodeCharTrans ]
+            n = M.assocs nodeCharTrans  ++ defaultAssocs
+              & map (\(k,v) -> arr ! v)
+              & sum
+    normalize :: UArray Int Double -> UArray Int Double
+    normalize arr = amap (/mother) arr
+        where
+        mother = sum $ elems arr
 
 randomChoose :: PrimMonad f => Gen (PrimState f) -> [a] -> f a
 randomChoose st l = do
@@ -112,20 +132,23 @@ randomGenerate st automaton routeTbl maxLen
         randomWalk strLen (initState automaton) (reverse $ take strLen routeTbl)
   where
     list = take maxLen routeTbl
-    lenCands = [ i | (i,arr) <- zip [0..maxLen-1] list, arr ! initState automaton ]
+    lenCands = [ i | (i,arr) <- zip [0..maxLen-1] list, arr ! initState automaton > 0 ]
+    chooseUniform :: Double -> Double -> [(Char, Int, Double)] -> (Char, Int, Double)
+    chooseUniform p mother [v] = v
+    chooseUniform p mother (v@(_,_,q):vs)
+        | p <= mother * q = v
+        | otherwise = chooseUniform (p - mother * q) mother vs
     randomWalk :: Int -> Int -> RouteTable -> f String
     randomWalk 0 !v _ = pure ""
     randomWalk k v (arr:arrs) = do
-        let candsChar = filter ((arr !).snd) $ M.assocs nodeCharTrans
-            defaultOk = arr ! nodeDefaultTrans
-            candsAny = [ (ch, nodeDefaultTrans) | defaultOk, ch <- [chr 32..chr 126], M.notMember ch nodeCharTrans  ]
-            transGroup =
-                candsChar ++ candsAny
-                 & sortBy (compare `on` snd)
-                 & groupBy ((==) `on` snd)
+        let defaultAssocs = [ (ch,nodeDefaultTrans) | arr ! nodeDefaultTrans > 0, ch <- alphabet, M.notMember ch nodeCharTrans ]
+            cands = M.assocs nodeCharTrans ++ defaultAssocs
+                & map (\(k,v) -> (k,v, arr ! v))
+                & filter (\(_,_,p) -> p > 0)
+            mother = recip $ sum $ map (\(_,_,p) -> p) cands
             Node{..} = nodes automaton ! v
-        grp <- randomChoose st transGroup
-        (ch, w) <- randomChoose st grp
+        r <- uniformR (0,1) st
+        let (ch, w, _) = chooseUniform r mother cands
         (ch:) <$> randomWalk (k-1) w arrs
 
 instance Model String where

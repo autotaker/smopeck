@@ -20,6 +20,15 @@ endpoint "/hello" GET {
     }
 }
 
+endpoint "/profile" GET {
+    response: JsonResponse {
+        body: Object {
+            id : Int [ . > 0 ],
+            name : String [ . =~ r'[a-zA-Z0-9]{1,10}' ]
+        }
+    }
+}
+
 endpoint "/regex" GET {
     response: JsonResponse {
         body: Array {
@@ -57,15 +66,15 @@ endpoint "/param" GET {
 endpoint "/search" GET {
     parameter: Parameter {
         query : Object {
-            pageSize : Int [ . > 0, . <= 100]
+            key : String 
         }
     },
     response: JsonResponse {
         body: Array {
-            length: Int [ . >= 0, . < parameter.query.pageSize ],
+            length: Int [ . >= 0, . < 10 ],
             get(i): Object {
                 id: Int [ . > 0 ],
-                message: String
+                content: String [ . =~ r'.*' + parameter.query.key + r'.*' ]
             }
         }
     }
@@ -83,6 +92,20 @@ endpoint "/post" POST {
             message: String [ . = 'hello: ' + request.body.message ]
         }
     }
+}
+
+endpoint "/user/:id/profile/email" POST {
+    parameter : Parameter {
+        path: Object {
+            id : Int [ . > 0]
+        }
+    },
+    request: JsonRequest {
+        body: Object {
+            email: String [ . =~ r'[a-zA-Z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*' ]
+        }
+    },
+    response: JsonResponse
 }
 
 type Follower = Object {
