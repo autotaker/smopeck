@@ -98,6 +98,9 @@ pushChar ch = do
 lexeme :: AlexInput -> Int -> String
 lexeme (_,_, _, s) len = take len s
 
+remaining :: AlexInput -> String
+remaining (_,ch,_,s) = ch:s
+
 unescape :: String -> Char
 unescape ['\\', 'n'] = '\n'
 unescape ['\\', 'r'] = '\r'

@@ -5,6 +5,8 @@ module Smopeck.Spec.Parser(
     runLexer
     , runLexerMock
     , parse
+    , parseExpr
+    , parseTypeExp
 ) where
 import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte, Match)
 import qualified Smopeck.Spec.Lexer as L
@@ -14,7 +16,9 @@ import qualified Smopeck.Spec.TypeExp as T
 import Control.Monad.Free
 }
 
-%name parse
+%name parse TopLevelDefList
+%name parseTypeExp TypeExp
+%partial parseExpr Exp
 %tokentype { Token }
 %lexer {lexerWrap} { EOF }
 %monad { Free Lexer }  

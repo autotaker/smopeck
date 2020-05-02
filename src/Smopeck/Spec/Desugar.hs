@@ -6,12 +6,34 @@ import           Data.List
 import qualified Data.Map              as M
 import           Smopeck.Mock.Location
 import           Smopeck.Spec.Exp
+import qualified Smopeck.Spec.Lexer    as Lexer
+import qualified Smopeck.Spec.Parser   as Parser
 import           Smopeck.Spec.TypeExp
+
+parseExpr :: String -> (Exp Parsed, String)
+parseExpr s = case Lexer.runAlex s ((,) <$> Parser.runLexer Parser.parseExpr <*> (Lexer.remaining <$> Lexer.alexGetInput)) of
+    Left err     -> error err
+    Right result -> result
 
 desugarExpF :: ExpF Parsed a -> ExpF Desugar a
 desugarExpF (Literal l)   = desugarLiteral l
 desugarExpF (Var a)       = Var a
 desugarExpF (App op args) = App op (map desugarExpF args)
+
+desugarString :: BindEnv -> String -> Exp Desugar
+desugarString env = collect . go []
+    where
+    collect xs = Exp (App Add xs)
+    go :: String -> String -> [ExpF Desugar (LocationExp Desugar)]
+    go acc ('$':'{':xs) =
+        case parseExpr xs of
+            (expr, '}': xs') ->
+                let Exp exprF = desugarExp env expr in
+                Literal (LString (reverse acc)) : exprF : go [] xs'
+            (_, xs') -> error $ "syntax error expected '}' but found " ++ show xs'
+    go acc (x:xs) = go (x:acc) xs
+    go [] [] = []
+    go acc [] = [Literal (LString (reverse acc))]
 
 desugarLiteral :: Literal Parsed -> ExpF Desugar a
 desugarLiteral LNull         = Literal LNull
