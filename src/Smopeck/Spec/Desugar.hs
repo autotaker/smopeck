@@ -71,7 +71,7 @@ desugarTypeExpF env (LiteralType l) =
         typeExpRef = ref
     }
     where
-        f op = [(op, Exp (desugarLiteral env l))]
+        f op = [(op, Exp (desugarLiteral (".":env) l))]
         ref = case l of
             LNumber _   -> f Eq
             LString _   -> f Eq
@@ -79,7 +79,7 @@ desugarTypeExpF env (LiteralType l) =
             LBool _     -> f Eq
             LNull       -> []
             LRegex _    -> f Match
-desugarTypeExpF env ty@(TypeExpF{}) = ty {
+desugarTypeExpF env ty@TypeExpF{} = ty {
     typeExpBind = BindDebrujin,
     typeExpExt = desugarTypeExt (name:env) (typeExpExt ty),
     typeExpRef = desugarTypeRef (name:env) (typeExpRef ty)

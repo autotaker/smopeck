@@ -24,6 +24,10 @@ spec = do
             let tyLit = LElem $ LiteralType (LNumber 0)
                 expected = LElem $ TypeExpF (Prim PNumber) BindDebrujin M.empty [ (Eq, Exp $ Literal (LNumber 0))]
             desugarTypeExp [] tyLit `shouldBe` expected
+        it "desugar dq string literal type" $ do
+            let tyLit = LElem $ LiteralType (LDQString "${obj.string}")
+                expected = LElem $ TypeExpF (Prim PString) BindDebrujin M.empty [(Eq,Exp (App Add [Literal (LString ""),App (Func "str") [Var (Chain (Root (Relative 1)) (FieldString "string"))]]))]
+            desugarTypeExp ["obj"] tyLit `shouldBe` expected
 
     describe "Smopeck.Spec.Desugar.desugarString" $
         it "test" $ do

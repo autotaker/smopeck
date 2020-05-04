@@ -34,6 +34,7 @@ runApp config = runExceptT doit >>= \case
         let typeEnv = M.fromList [ (tyName, def) | TypeDef tyName def <- defs ]
                 & desugarTypeEnv
                 & evalTypeEnv
+        liftIO $ mapM_ (hPrint stderr) $ M.assocs typeEnv
         mainType <- case M.lookup "Main" typeEnv of
             Nothing  -> throwError "Main type is not defined"
             Just def -> pure def
