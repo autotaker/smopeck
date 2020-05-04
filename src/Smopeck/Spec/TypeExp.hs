@@ -22,13 +22,14 @@ import           Smopeck.Spec.Exp
 import           Smopeck.Spec.Lattice
 import           Text.Read             hiding (Number, String)
 
-data TypeExpF (mode :: Mode) (head :: HeadMode) =
-    TypeExpF {
+data TypeExpF (mode :: Mode) (head :: HeadMode) where
+    TypeExpF :: {
         typeExpName :: TypeName head,
         typeExpBind :: BindName mode,
         typeExpExt  :: TypeExtension mode,
         typeExpRef  :: TypeRefine mode
-    }
+      } -> TypeExpF mode head
+    LiteralType :: Literal Parsed -> TypeExpF Parsed head
 
 deriving instance (Show (Exp mode), Show (TypeName head), Show (BindName mode), Show (TypeExtension mode) ) =>
     Show (TypeExpF mode head)

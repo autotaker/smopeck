@@ -85,6 +85,7 @@ TypeExpNameBindExtRef
     | TypeExpNameBindExt TypeRef { $1 $2 }
 
 TypeExp : TypeExpNameBindExtRef { $1 }
+        | Literal { LElem (T.LiteralType $1) }
         | '(' TypeExp ')' { $2 }
         | TypeExp '&' TypeExp { LMeet $1 $3 }
         | TypeExp '|' TypeExp { LJoin $1 $3 }

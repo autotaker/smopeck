@@ -1,5 +1,6 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs     #-}
+{-# LANGUAGE DataKinds  #-}
+{-# LANGUAGE GADTs      #-}
+{-# LANGUAGE LambdaCase #-}
 module Smopeck.Spec.Desugar where
 
 import           Data.List
@@ -52,8 +53,33 @@ desugarTypeEnv = fmap (desugarTypeExp [])
 desugarTypeExp :: BindEnv -> TypeExp Parsed head -> TypeExp Desugar head
 desugarTypeExp env = fmap (desugarTypeExpF env)
 
+typeOfLiteral :: Literal mode -> Primitive
+typeOfLiteral = \case
+    LNumber _   -> PNumber
+    LString _   -> PString
+    LBool _     -> PBool
+    LRegex _    -> PString
+    LDQString _ -> PString
+    LNull       -> PNull
+
 desugarTypeExpF :: BindEnv -> TypeExpF Parsed head -> TypeExpF Desugar head
-desugarTypeExpF env ty = ty {
+desugarTypeExpF env (LiteralType l) =
+    TypeExpF {
+        typeExpName = Prim (typeOfLiteral l),
+        typeExpBind = BindDebrujin,
+        typeExpExt = M.empty,
+        typeExpRef = ref
+    }
+    where
+        f op = [(op, Exp (desugarLiteral env l))]
+        ref = case l of
+            LNumber _   -> f Eq
+            LString _   -> f Eq
+            LDQString _ -> f Eq
+            LBool _     -> f Eq
+            LNull       -> []
+            LRegex _    -> f Match
+desugarTypeExpF env ty@(TypeExpF{}) = ty {
     typeExpBind = BindDebrujin,
     typeExpExt = desugarTypeExt (name:env) (typeExpExt ty),
     typeExpRef = desugarTypeRef (name:env) (typeExpRef ty)

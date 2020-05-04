@@ -11,7 +11,7 @@ import           Test.Hspec
 
 spec :: Spec
 spec = do
-    describe "Smopeck.Spec.Desugar.desugarTypeExp" $
+    describe "Smopeck.Spec.Desugar.desugarTypeExp" $ do
         it "test" $ do
             let tyInt = LElem $ TypeExpF (Prim PInt) (BindName "i") M.empty [ (Eq, Exp $ Var (Root (Absolute "obj")))]
                 tyObj :: TypeExp 'Parsed 'HDefault
@@ -20,6 +20,11 @@ spec = do
                 tyObj' :: TypeExp 'Desugar 'HDefault
                 tyObj' = LElem $ TypeExpF (Prim PObject) BindDebrujin (M.fromList [ (FieldString "hoge", tyInt')]) []
             desugarTypeExp [] tyObj `shouldBe` tyObj'
+        it "desugar literal type" $ do
+            let tyLit = LElem $ LiteralType (LNumber 0)
+                expected = LElem $ TypeExpF (Prim PNumber) BindDebrujin M.empty [ (Eq, Exp $ Literal (LNumber 0))]
+            desugarTypeExp [] tyLit `shouldBe` expected
+
     describe "Smopeck.Spec.Desugar.desugarString" $
         it "test" $ do
             let input = "hoge ${piyo} fuga"

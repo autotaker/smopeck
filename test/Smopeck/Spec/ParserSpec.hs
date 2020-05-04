@@ -45,7 +45,12 @@ spec = do
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
 
         it "parse regex match expression" $ do
-            -- type Sample = String [ . =~ r'[a-z]*' ]
+            -- String [ . =~ r'[a-z]*' ]
             let tokens = [UpperId "String", Lsq, Dot, Match, SQRegex "[a-z]*", Rsq ]
                 expected = fTypeExp "String" "." [] [ (Syntax.Match, T.Exp $ Literal $ LRegex "[a-z]*" )]
+            runLexerMock parseTypeExp tokens `shouldBe` Right expected
+        it "parse literal type" $ do
+            -- "hoge"
+            let tokens = [DQString "hoge"]
+                expected = LElem $ T.LiteralType (LDQString "hoge")
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
