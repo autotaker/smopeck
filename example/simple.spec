@@ -6,6 +6,8 @@ type Main = Object @obj {
     intField2: Pos,
     numberField: Number [ . > -obj.intField2, . < obj.intField1],
     stringField: String [ . =~ r'[0-9]{10}'],
+    dqField: String [ . = "hoge ${obj.stringField} piyo" ],
+    calcField: String [ .= str(obj.intField1 + obj. intField2)],
     booleanField: Bool,
     nullField: Null,
     arrayField: Array @arr {

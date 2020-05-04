@@ -68,3 +68,7 @@ spec =
                 rhs = LRegex "fuga"
                 expected = LRegex "hoge\\[]fuga"
             interpret Add [lhs, rhs] `shouldBe` expected
+        it "str(0) == '0'" $ do
+            let input = [LNumber 0]
+                expected = LString "0.0"
+            interpret (Func "str") input `shouldBe` expected

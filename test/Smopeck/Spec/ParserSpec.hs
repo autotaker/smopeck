@@ -21,6 +21,12 @@ spec = do
             -- endpoint "/" GET {}
             let tokens = [Endpoint, DQString "/", UpperId "GET", Lbra, Rbra]
             runLexerMock parse tokens `shouldBe` Right [EndpointDef "/" "GET" []]
+    describe "Smopeck.Spec.Parser.parseExpr" $ do
+        it "parse func call" $ do
+            -- str(x)
+            let tokens = [LowerId "str", Lpar, LowerId "x", Rpar]
+                expected = T.Exp $ App (Func "str") [Var (Root (Absolute "x"))]
+            runLexerMock parseExpr tokens `shouldBe` Right expected
     describe "Smopeck.Spec.Parser.parseTypeExp" $ do
         it "parse type synonym def" $ do
             -- Json { name : String }

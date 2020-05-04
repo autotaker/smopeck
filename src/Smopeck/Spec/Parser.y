@@ -129,6 +129,7 @@ LocationExp : '.' { Root (Relative 0) }
 Exp : ExpF { T.Exp $1 }
 ExpF 
     : LocationExp   { Var $1 }
+    | lower '(' ArgList ')' { App (Func $1) $3 }
     | Literal       { Literal $1 }
     | '(' ExpF ')'  { $2 }
     | ExpF '+' ExpF { App Add [$1, $3] }
@@ -140,6 +141,9 @@ Literal : dqLiteral { LDQString $1 }
         | sqLiteral { LString $1 }
         | sqRegex   { LRegex $1 }
         | number    { LNumber $1 }
+ArgList 
+    : ExpF  { [$1] }
+    | ExpF ',' ArgList { $1 : $3 }
 
 {
 -- Footer

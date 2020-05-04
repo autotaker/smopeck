@@ -42,7 +42,7 @@ instance Monad (ExpF mode) where
     (App op args) >>= f = App op (map (>>= f) args)
 
 data Op = Add | Sub | Mul | Div
-        | Eq | Lt | Gt | Lte | Gte | Match
+        | Eq | Lt | Gt | Lte | Gte | Match | Func String
         deriving(Eq,Ord, Show)
 
 data Literal (mode :: Mode) where
@@ -59,7 +59,6 @@ deriving instance (Ord (Literal Parsed))
 deriving instance (Show (Literal Desugar))
 deriving instance (Eq (Literal Desugar))
 deriving instance (Ord (Literal Desugar))
-
 
 eval :: (Eq a, Ord a, Show a) =>M.Map a (Literal Desugar) -> ExpF Desugar a -> Either a (Literal Desugar)
 eval env = go
@@ -79,11 +78,13 @@ locations (Var x)      = S.singleton  x
 locations (App _ args) = S.unions (map locations args)
 
 interpret :: Op -> [Literal Desugar] -> Literal Desugar
-interpret Add [LNumber x, LNumber y] = LNumber $ x + y
-interpret Add [LString x, LString y] = LString $ x ++ y
-interpret Add [LRegex x, LRegex y] = LRegex $ x ++ y
-interpret Add [LString x, LRegex y] = LRegex $ coerce (escapeR x) ++ y
-interpret Add [LRegex x, LString y] = LRegex $ x ++ coerce (escapeR y)
+interpret Add l = foldl1 f l
+    where
+    f (LNumber x) (LNumber y) = LNumber $ x + y
+    f (LString x) (LString y) = LString $ x ++ y
+    f (LRegex x) (LRegex y)   = LRegex $ x ++ y
+    f (LString x) (LRegex y)  = LRegex $ coerce (escapeR x) ++ y
+    f (LRegex x) (LString y)  = LRegex $ x ++ coerce (escapeR y)
 interpret Sub [LNumber x, LNumber y] = LNumber $ x - y
 interpret Sub [LNumber x] = LNumber $ -x
 interpret Mul [LNumber x, LNumber y] = LNumber $ x * y
@@ -94,5 +95,13 @@ interpret Gt [x, y] = LBool $ x > y
 interpret Lte [x, y] = LBool $ x <= y
 interpret Gte [x, y] = LBool $ x >= y
 interpret Match [LString x, LRegex s] = LBool $ matchR x (RString s)
+interpret (Func "str") [x] =
+    LString $ case x of
+        LNumber x   -> show x
+        LString x   -> x
+        LRegex x    -> x
+        LBool True  -> "true"
+        LBool False -> "false"
+        LNull       -> "null"
 interpret op args =
     error $ "no interpretation for :" ++ show op ++ " " ++ show args

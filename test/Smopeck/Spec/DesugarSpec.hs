@@ -23,7 +23,7 @@ spec = do
     describe "Smopeck.Spec.Desugar.desugarString" $
         it "test" $ do
             let input = "hoge ${piyo} fuga"
-                expected = Exp (App Add [Literal (LString "hoge "),Var (Root (Absolute "piyo")),Literal (LString " fuga")])
+                expected = App Add [Literal (LString "hoge "),App (Func "str") [Var (Root (Absolute "piyo"))],Literal (LString " fuga")]
             desugarString [] input `shouldBe` expected
 
 

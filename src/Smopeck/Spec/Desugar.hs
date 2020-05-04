@@ -15,33 +15,34 @@ parseExpr s = case Lexer.runAlex s ((,) <$> Parser.runLexer Parser.parseExpr <*>
     Left err     -> error err
     Right result -> result
 
-desugarExpF :: ExpF Parsed a -> ExpF Desugar a
-desugarExpF (Literal l)   = desugarLiteral l
-desugarExpF (Var a)       = Var a
-desugarExpF (App op args) = App op (map desugarExpF args)
-
-desugarString :: BindEnv -> String -> Exp Desugar
-desugarString env = collect . go []
+desugarExpF :: BindEnv -> ExpF Parsed (LocationExp Parsed) -> ExpF Desugar (LocationExp Desugar)
+desugarExpF env = go
     where
-    collect xs = Exp (App Add xs)
+        go (Literal l)   = desugarLiteral env l
+        go (Var a)       = Var (desugarLocationExp env a)
+        go (App op args) = App op (map go args)
+
+desugarString :: BindEnv -> String -> ExpF Desugar (LocationExp Desugar)
+desugarString env = App Add . go []
+    where
     go :: String -> String -> [ExpF Desugar (LocationExp Desugar)]
     go acc ('$':'{':xs) =
         case parseExpr xs of
-            (expr, '}': xs') ->
-                let Exp exprF = desugarExp env expr in
-                Literal (LString (reverse acc)) : exprF : go [] xs'
+            (Exp expr, '}': xs') ->
+                let exprF = desugarExpF env expr in
+                Literal (LString (reverse acc)) : App (Func "str") [exprF] : go [] xs'
             (_, xs') -> error $ "syntax error expected '}' but found " ++ show xs'
     go acc (x:xs) = go (x:acc) xs
     go [] [] = []
     go acc [] = [Literal (LString (reverse acc))]
 
-desugarLiteral :: Literal Parsed -> ExpF Desugar a
-desugarLiteral LNull         = Literal LNull
-desugarLiteral (LBool b)     = Literal (LBool b)
-desugarLiteral (LNumber n)   = Literal (LNumber n)
-desugarLiteral (LString s)   = Literal (LString s)
-desugarLiteral (LDQString s) = error "not yet implemented"
-desugarLiteral (LRegex x)    = Literal (LRegex x)
+desugarLiteral :: BindEnv -> Literal Parsed -> ExpF Desugar (LocationExp Desugar)
+desugarLiteral _ LNull           = Literal LNull
+desugarLiteral _ (LBool b)       = Literal (LBool b)
+desugarLiteral _ (LNumber n)     = Literal (LNumber n)
+desugarLiteral _ (LString s)     = Literal (LString s)
+desugarLiteral env (LDQString s) = desugarString env s
+desugarLiteral _ (LRegex x)      = Literal (LRegex x)
 
 type BindEnv = [String]
 
@@ -66,11 +67,10 @@ desugarTypeExt env = M.fromList . map f . M.toList
         (FieldIndex BindDebrujin, desugarTypeExp (i:env) ty)
 
 desugarTypeRef :: BindEnv -> TypeRefine Parsed -> TypeRefine Desugar
-desugarTypeRef env = map (\(op, Exp e) ->
-    (op, Exp $ desugarExpF $ fmap (desugarLocationExp env) e))
+desugarTypeRef env = map (\(op, e) -> (op, desugarExp env e))
 
 desugarExp :: BindEnv -> Exp Parsed -> Exp Desugar
-desugarExp env (Exp e) = Exp $ desugarExpF $ fmap (desugarLocationExp env) e
+desugarExp env (Exp e) = Exp $ desugarExpF env e
 
 desugarLocationExp :: BindEnv -> LocationExp Parsed -> LocationExp Desugar
 desugarLocationExp env = go
