@@ -8,7 +8,7 @@ module Smopeck.Spec.Parser(
     , parseExpr
     , parseTypeExp
 ) where
-import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte, Match)
+import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte, Match, And,Or)
 import qualified Smopeck.Spec.Lexer as L
 
 import Smopeck.Spec.Syntax
@@ -27,6 +27,10 @@ import Control.Monad.Free
 %token
     type     { Type }
     endpoint { Endpoint }
+    true     { TTrue }
+    false    { TFalse }
+    '&&'     { L.And }
+    '||'     { L.Or }
     '='      { L.Eq }
     '=~'     { L.Match }
     '<'      { L.Lt }
@@ -56,8 +60,9 @@ import Control.Monad.Free
     sqLiteral { SQString  $$ }
     sqRegex  { SQRegex $$ }
 
-%left '|'
-%left '&'
+%left '|' '||'
+%left '&' '&&'
+%nonassoc '=' '<' '>' '<=' '>='
 %left '+' '-'
 %left '*' '/'
 %left NEG
@@ -133,6 +138,13 @@ ExpF
     | lower '(' ArgList ')' { App (Func $1) $3 }
     | Literal       { Literal $1 }
     | '(' ExpF ')'  { $2 }
+    | ExpF '||' ExpF { App Or [$1, $3] }
+    | ExpF '&&' ExpF { App And [$1, $3] }
+    | ExpF '=' ExpF { App Eq [$1, $3] }
+    | ExpF '<' ExpF { App Lt [$1, $3] }
+    | ExpF '>' ExpF { App Gt [$1, $3] }
+    | ExpF '<=' ExpF { App Lte [$1, $3] }
+    | ExpF '>=' ExpF { App Gte [$1, $3] }
     | ExpF '+' ExpF { App Add [$1, $3] }
     | ExpF '-' ExpF { App Sub [$1, $3] }
     | ExpF '*' ExpF { App Mul [$1, $3] }
@@ -142,6 +154,8 @@ Literal : dqLiteral { LDQString $1 }
         | sqLiteral { LString $1 }
         | sqRegex   { LRegex $1 }
         | number    { LNumber $1 }
+        | true      { LBool True }
+        | false     { LBool False }
 ArgList 
     : ExpF  { [$1] }
     | ExpF ',' ArgList { $1 : $3 }
@@ -164,6 +178,7 @@ runLexerMock :: Free Lexer a -> [Token] -> Either String a
 runLexerMock (Pure a) _ = pure a
 runLexerMock (Free (Lex f)) (token:ts) = runLexerMock (f token) ts
 runLexerMock (Free (Lex f)) [] = runLexerMock (f EOF) []
+runLexerMock (Free (GetPos f)) ts = runLexerMock (f alexStartPos) ts
 runLexerMock (Free (Error str)) _ = Left str
 
 lexerWrap :: (Token -> Free Lexer a) -> Free Lexer a

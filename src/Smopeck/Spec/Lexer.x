@@ -14,10 +14,14 @@ tokens :-
   <0> $white+                               ;
   <0> ^"type"                               { token $ \_ _ -> Type }
   <0> ^"endpoint"                           { token $ \_ _ -> Endpoint }
+  <0> "true"                                { token $ \_ _ -> TTrue }
+  <0> "false"                               { token $ \_ _ -> TFalse }
   <0> $capital $alphanum*                   { token $ \s len -> UpperId $ lexeme s len }
   <0> $small $alphanum*                     { token $ \s len -> LowerId $ lexeme s len }
   <0> "|"                                   { token $ \_ _ -> Join }
   <0> "&"                                   { token $ \_ _ -> Meet }
+  <0> "||"                                  { token $ \_ _ -> Or }
+  <0> "&&"                                  { token $ \_ _ -> And }
   <0> "="                                   { token $ \_ _ -> Eq }
   <0> "=~"                                  { token $ \_ _ -> Match }
   <0> "<"                                   { token $ \_ _ -> Lt }
@@ -57,9 +61,11 @@ tokens :-
 data Token = 
     Type
   | Endpoint
+  | TTrue | TFalse
   | Eq | Join | Meet | Match
   | Lpar | Rpar
   | Lbra | Rbra
+  | And | Or
   | Lt | Gt | Lte | Gte
   | Lsq | Rsq
   | Add | Sub | Mul | Div

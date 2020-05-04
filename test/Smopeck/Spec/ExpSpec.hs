@@ -46,6 +46,14 @@ spec =
             let env = M.fromList [ ("a", LNumber 1), ("b", LNumber 2) ]
                 expr = App Gte [Var "a", Var "b"]
             eval env expr `shouldBe` Right (LBool False)
+        it "true && true == true" $ do
+            let args = [LBool True, LBool True]
+                expected = LBool True
+            interpret And args `shouldBe` expected
+        it "false || true == true" $ do
+            let args = [LBool False, LBool True]
+                expected = LBool True
+            interpret Or args `shouldBe` expected
         it "\"a\" + \"b\" == \"ab\"" $ do
             let expr :: Exp
                 expr = App Add [Literal (LString "a"), Literal (LString "b")]

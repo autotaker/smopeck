@@ -41,5 +41,14 @@ spec =
             let input = "'abracadabra' =~ r'[abcdr]*' "
                 expected = [SQString "abracadabra", Match, SQRegex "[abcdr]*" ]
             parse input `shouldBe` Right expected
+        it "lex `true` as a reserved token" $
+            parse "true" `shouldBe` Right [TTrue]
+        it "lex `false` as a reserved token" $
+            parse "false" `shouldBe` Right [TFalse]
+        it "lex `||` as a logical or operator token" $
+            parse "||" `shouldBe` Right [Or]
+        it "lex `&&` as a logical and operator token" $
+            parse "&&" `shouldBe` Right [And]
+
 
 

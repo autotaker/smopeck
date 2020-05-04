@@ -3,7 +3,7 @@ module Smopeck.Spec.ParserSpec where
 
 import           Smopeck.Spec.Lexer
 import           Smopeck.Spec.Parser
-import           Smopeck.Spec.Syntax  hiding (Eq, Gt, Lt, Match)
+import           Smopeck.Spec.Syntax  hiding (And, Eq, Gt, Lt, Match, Or)
 import qualified Smopeck.Spec.Syntax  as Syntax
 import qualified Smopeck.Spec.TypeExp as T
 import           Test.Hspec
@@ -27,6 +27,16 @@ spec = do
             let tokens = [LowerId "str", Lpar, LowerId "x", Rpar]
                 expected = T.Exp $ App (Func "str") [Var (Root (Absolute "x"))]
             runLexerMock parseExpr tokens `shouldBe` Right expected
+        it "parse Boolean expression" $ do
+            -- true == false || 0 < 1
+            let tokens = [TTrue, Eq, TFalse, Or, Number 0, Lt, Number 1]
+                expected = T.Exp $
+                    App Syntax.Or [
+                        App Syntax.Eq [Literal (LBool True), Literal (LBool False)],
+                        App Syntax.Lt [Literal (LNumber 0), Literal (LNumber 1)]
+                    ]
+            runLexerMock parseExpr tokens `shouldBe` Right expected
+
     describe "Smopeck.Spec.Parser.parseTypeExp" $ do
         it "parse type synonym def" $ do
             -- Json { name : String }

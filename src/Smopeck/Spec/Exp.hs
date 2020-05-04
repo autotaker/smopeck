@@ -42,7 +42,8 @@ instance Monad (ExpF mode) where
     (App op args) >>= f = App op (map (>>= f) args)
 
 data Op = Add | Sub | Mul | Div
-        | Eq | Lt | Gt | Lte | Gte | Match | Func String
+        | Eq | Lt | Gt | Lte | Gte | Match
+        | And | Or | Func String
         deriving(Eq,Ord, Show)
 
 data Literal (mode :: Mode) where
@@ -95,6 +96,8 @@ interpret Gt [x, y] = LBool $ x > y
 interpret Lte [x, y] = LBool $ x <= y
 interpret Gte [x, y] = LBool $ x >= y
 interpret Match [LString x, LRegex s] = LBool $ matchR x (RString s)
+interpret And [LBool x, LBool y] = LBool $ x && y
+interpret Or [LBool x, LBool y] = LBool $ x || y
 interpret (Func "str") [x] =
     LString $ case x of
         LNumber x   -> show x
