@@ -2,7 +2,7 @@
 module Smopeck.Spec.Syntax(
     TopLevelDef(..), Field(..), TypeExp.BindName(..),
     Route, Method, VarName, UserType, TypeExp, TypeEnv, Primitive,
-    TypeExtension, Exp(..), TypeRefine, Lattice(..),
+    TypeExtension, Exp(..), TypeRefine, Lattice, LatticeExt(..),
     module Smopeck.Spec.Exp,
     module Smopeck.Mock.Location,
     fTypeExp
@@ -41,4 +41,5 @@ fTypeExp tyName bindName ext ref =
         (TypeExp.BindName bindName)
         (M.fromList ext)
         ref
+        TypeExp.NoCond
 

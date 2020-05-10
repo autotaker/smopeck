@@ -39,3 +39,10 @@
 <EndpointPath> ::= Double quoted String Literal
 <Method> ::= 'GET' | 'POST' | ... 
 ```
+
+## Conditional Types
+You can write conditional type with the following syntax.
+```
+<TypeExp> ::= <Exp> '?' <TypeExp>
+```
+`e ? ty` is read as "this type accepts a value of `ty` if the condition `e` is true, and otherwise this type has no inhabitans".

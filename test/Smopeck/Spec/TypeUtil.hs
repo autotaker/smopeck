@@ -8,7 +8,7 @@ import           Smopeck.Spec.Lattice
 import           Smopeck.Spec.TypeExp
 
 fPrim :: Primitive -> TypeExtension 'Desugar -> TypeRefine 'Desugar -> TypeExp 'Desugar head
-fPrim prim ext ref = LElem (TypeExpF (Prim prim) BindDebrujin  ext ref)
+fPrim prim ext ref = LElem (TypeExpF (Prim prim) BindDebrujin  ext ref NoCond)
 
 fNull :: TypeExp 'Desugar head
 fNull = fPrim PNull M.empty []

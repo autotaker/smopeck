@@ -5,12 +5,17 @@
 {-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE Rank2Types         #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies       #-}
 {-# LANGUAGE TypeOperators      #-}
 module Smopeck.Spec.Lattice where
 import           Control.Monad
+import           Control.Monad.Free
+import           Data.Function
 import           Data.Kind
+import           Data.Void
 import           Unsafe.Coerce
 
 data LatticeMode = Full | Join | Meet
@@ -24,30 +29,40 @@ type family JoinSupported (l :: LatticeMode) :: Constraint where
     JoinSupported Join = ()
     JoinSupported _ = (True ~ False)
 
-data Lattice (m :: LatticeMode) a where
-    LBot  :: JoinSupported m => Lattice m a
-    LElem :: a -> Lattice m a
-    LJoin :: JoinSupported m => Lattice m a -> Lattice m a -> Lattice m a
-    LMeet :: MeetSupported m => Lattice m a -> Lattice m a -> Lattice m a
-    LTop  :: MeetSupported m => Lattice m a
+data LatticeExt (m :: LatticeMode) f a where
+    LBot  :: JoinSupported m => LatticeExt m f a
+    LElem :: a -> LatticeExt m f a
+    LJoin :: JoinSupported m => LatticeExt m f a -> LatticeExt m f a -> LatticeExt m f a
+    LMeet :: MeetSupported m => LatticeExt m f a -> LatticeExt m f a -> LatticeExt m f a
+    LTop  :: MeetSupported m => LatticeExt m f a
+    LExt  :: f (LatticeExt m f a) -> LatticeExt m f a
 
-deriving instance Functor (Lattice m)
-deriving instance Foldable (Lattice m)
-deriving instance Traversable (Lattice m)
+newtype VoidF a = VoidF Void
+    deriving(Functor, Foldable, Traversable, Show, Eq, Ord)
+type Lattice m = LatticeExt m VoidF
+
+
+deriving instance Functor f => Functor (LatticeExt m f)
+deriving instance Foldable f => Foldable (LatticeExt m f)
+deriving instance Traversable f => Traversable (LatticeExt m f)
 deriving instance Show a => Show (Lattice m a)
 deriving instance Eq a => Eq (Lattice m a)
 deriving instance Ord a => Ord (Lattice m a)
 
-instance Applicative (Lattice m) where
+instance Functor f => Applicative (LatticeExt m f) where
     pure = LElem
     (<*>) = ap
 
-instance Monad (Lattice m) where
+instance Functor  f => Monad (LatticeExt m f) where
     LBot >>= _ = LBot
     LTop >>= _ = LTop
     LElem a >>= f = f a
     LJoin a b >>= f = LJoin (a >>= f) (b >>= f)
     LMeet a b >>= f = LMeet (a >>= f) (b >>= f)
+    LExt ta >>= f = LExt (fmap (>>= f) ta)
+    -- ta :: f (LatticeExt m f a)
+    -- f :: a -> LatticeExt m f b
+    -- fmap (>>= f) ta ::  f (LatticeExt m f b))
 
 class Cata f where
     data CataF f s a
@@ -105,6 +120,15 @@ toJoinNormalForm (LMeet a b) = do
     mb <- toJoinNormalForm b
     pure $ LMeet ma mb
 
+toJoinExtNormalForm :: Traversable f => LatticeExt m f a -> Lattice Join (Lattice Meet (Free f a))
+toJoinExtNormalForm = fix $ \go -> \case
+    LBot      -> LBot
+    LTop      -> LElem LTop
+    LElem a -> LElem (LElem (pure a))
+    LJoin a b -> LJoin (go a) (go b)
+    LMeet a b -> LMeet <$> go a <*> go b
+    LExt fa -> fmap Free . sequenceA <$> traverse go fa
+
 toMeetNormalForm :: Lattice m a -> Lattice Meet (Lattice Join a)
 toMeetNormalForm LTop = LTop
 toMeetNormalForm LBot = LElem LBot
@@ -116,5 +140,5 @@ toMeetNormalForm (LJoin a b) = do
     mb <- toMeetNormalForm b
     pure $ LJoin ma mb
 
-castFull :: Lattice m a -> Lattice Full a
+castFull :: Lattice m a -> LatticeExt Full f a
 castFull = unsafeCoerce

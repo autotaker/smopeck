@@ -7,6 +7,7 @@ import           Data.List
 import qualified Data.Map              as M
 import           Smopeck.Mock.Location
 import           Smopeck.Spec.Exp
+import           Smopeck.Spec.Lattice
 import qualified Smopeck.Spec.Lexer    as Lexer
 import qualified Smopeck.Spec.Parser   as Parser
 import           Smopeck.Spec.TypeExp
@@ -50,8 +51,16 @@ type BindEnv = [String]
 desugarTypeEnv :: DefaultTypeEnv Parsed -> DefaultTypeEnv Desugar
 desugarTypeEnv = fmap (desugarTypeExp [])
 
-desugarTypeExp :: BindEnv -> TypeExp Parsed head -> TypeExp Desugar head
-desugarTypeExp env = fmap (desugarTypeExpF env)
+desugarTypeExp :: BindEnv -> TypeExp Parsed HDefault -> TypeExp Desugar HDefault
+desugarTypeExp env = go
+    where
+    go LTop                  = LTop
+    go LBot                  = LBot
+    go (LElem a)             = LElem (desugarTypeExpF env a)
+    go (LMeet a b)           = LMeet (go a) (go b)
+    go (LJoin a b)           = LJoin (go a) (go b)
+    go (LExt (HasCondF e a)) = LExt (HasCondF (desugarExp env e) (go a))
+
 
 typeOfLiteral :: Literal mode -> Primitive
 typeOfLiteral = \case
@@ -68,7 +77,8 @@ desugarTypeExpF env (LiteralType l) =
         typeExpName = Prim (typeOfLiteral l),
         typeExpBind = BindDebrujin,
         typeExpExt = M.empty,
-        typeExpRef = ref
+        typeExpRef = ref,
+        typeExpCond = NoCond
     }
     where
         f op = [(op, Exp (desugarLiteral (".":env) l))]
@@ -82,7 +92,8 @@ desugarTypeExpF env (LiteralType l) =
 desugarTypeExpF env ty@TypeExpF{} = ty {
     typeExpBind = BindDebrujin,
     typeExpExt = desugarTypeExt (name:env) (typeExpExt ty),
-    typeExpRef = desugarTypeRef (name:env) (typeExpRef ty)
+    typeExpRef = desugarTypeRef (name:env) (typeExpRef ty),
+    typeExpCond = NoCond
     } where BindName name = typeExpBind ty
 
 desugarTypeExt :: BindEnv -> TypeExtension Parsed -> TypeExtension Desugar

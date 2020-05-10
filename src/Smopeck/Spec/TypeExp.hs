@@ -1,5 +1,7 @@
 {-# LANGUAGE ConstraintKinds      #-}
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveFunctor        #-}
+{-# LANGUAGE DeriveTraversable    #-}
 {-# LANGUAGE ExplicitForAll       #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -11,6 +13,7 @@
 module Smopeck.Spec.TypeExp where
 
 import           Control.Monad
+import           Control.Monad.Free
 import           Data.Foldable
 import           Data.Graph
 import           Data.Kind
@@ -27,14 +30,24 @@ data TypeExpF (mode :: Mode) (head :: HeadMode) where
         typeExpName :: TypeName head,
         typeExpBind :: BindName mode,
         typeExpExt  :: TypeExtension mode,
-        typeExpRef  :: TypeRefine mode
+        typeExpRef  :: TypeRefine mode,
+        typeExpCond :: TypeCond mode head
       } -> TypeExpF mode head
     LiteralType :: Literal Parsed -> TypeExpF Parsed head
 
-deriving instance (Show (Exp mode), Show (TypeName head), Show (BindName mode), Show (TypeExtension mode) ) =>
-    Show (TypeExpF mode head)
-deriving instance (Eq (Exp mode), Eq (TypeName head), Eq (BindName mode), Eq (TypeExtension mode) ) =>
-    Eq (TypeExpF mode head)
+
+deriving instance
+    (Show (Exp mode),
+     Show (TypeName head),
+     Show (BindName mode),
+     Show (TypeExtension mode),
+     Show (TypeCond mode head)) => Show (TypeExpF mode head)
+deriving instance
+    (Eq (Exp mode),
+     Eq (TypeName head),
+     Eq (BindName mode),
+     Eq (TypeExtension mode),
+     Eq (TypeCond mode head)) => Eq (TypeExpF mode head)
 
 
 -- type TypeExp mode head = Lattice Full (TypeExpF mode head)
@@ -42,7 +55,17 @@ type family LatticeOf (head :: HeadMode) :: LatticeMode where
     LatticeOf HDefault = Full
     LatticeOf WHNF = Join
 
-type TypeExp mode head = Lattice (LatticeOf head) (TypeExpF mode head)
+type TypeExp mode head = LatticeExt (LatticeOf head) (LatticeExtOf mode head) (TypeExpF mode head)
+
+type family LatticeExtOf mode head where
+    LatticeExtOf mode HDefault = TypeCondF mode
+    LatticeExtOf mode WHNF = VoidF
+
+data TypeCondF mode a = HasCondF (Exp mode) a
+    deriving(Functor, Foldable,Traversable)
+
+deriving instance (Eq (Exp mode), Eq a) => Eq (TypeCondF mode a)
+deriving instance (Show (Exp mode), Show a) => Show (TypeCondF mode a)
 
 data HeadMode = HDefault | WHNF
 
@@ -54,12 +77,26 @@ data BindName (head :: Mode) where
     BindName :: String -> BindName Parsed
     BindDebrujin :: BindName Desugar
 
+data TypeCond (mode :: Mode) (head :: HeadMode) where
+    NoCond :: TypeCond mode head
+    HasCond :: Exp mode -> TypeCond mode WHNF
+
+instance Semigroup (TypeCond mode head) where
+    NoCond <> x = x
+    x <> NoCond = x
+    HasCond (Exp x) <> HasCond (Exp y) =
+        HasCond (Exp (App And [x, y]))
+instance Monoid (TypeCond mode head) where
+    mempty = NoCond
+
 deriving instance Eq (TypeName h)
 deriving instance Ord (TypeName h)
 deriving instance Show (TypeName h)
 deriving instance Eq (BindName m)
 deriving instance Ord (BindName m)
 deriving instance Show (BindName m)
+deriving instance Show (Exp m) => Show (TypeCond m h)
+deriving instance Eq (Exp m) => Eq (TypeCond m h)
 
 instance Read (TypeName HDefault) where
     readPrec = do
@@ -95,6 +132,9 @@ deriving instance Show (Exp Parsed)
 type LocationExp mode = LocationF (Root RootAny) (Exp mode)
 type TypeRefine mode = [ (Op, Exp mode)]
 
+deriving instance (Show a, Show (Exp mode)) => Show (LatticeExt l (TypeCondF mode) a)
+deriving instance (Eq a, Eq (Exp mode)) => Eq (LatticeExt l (TypeCondF mode) a)
+
 evalTypeEnv :: DefaultTypeEnv Desugar -> WHNFTypeEnv Desugar
 evalTypeEnv env = env'
     where
@@ -116,11 +156,13 @@ evalTypeEnv env = env'
 
 evalTypeExp :: WHNFTypeEnv Desugar -> TypeExp Desugar HDefault -> TypeExp Desugar WHNF
 evalTypeExp env tyExp =
-    toJoinNormalForm (tyExp >>= eval) >>= cata g
+    toJoinExtNormalForm (tyExp >>= eval) >>= cata g
     where
+    eval :: TypeExpF Desugar HDefault -> LatticeExt Full (TypeCondF Desugar) (TypeExpF Desugar WHNF)
     eval tyExp@TypeExpF{ typeExpName = Prim prim }
-        = pure tyExp{ typeExpName = Prim prim }
+        = pure tyExp{ typeExpName = Prim prim, typeExpCond = NoCond }
     eval tyExp@TypeExpF{ typeExpName = User userType } =
+        -- castFull :: Ext
         castFull $ fmap (extend bindName ext ref) typeDef
             where
             typeDef = case M.lookup userType env of
@@ -131,9 +173,13 @@ evalTypeExp env tyExp =
             bindName = typeExpBind tyExp
     g = CataMeet {
         fMTop = undefined,
-        fMElem = pure,
+        fMElem = pure . evalCond,
         fMMeet = curry (join . uncurry (liftM2 intersect))
     }
+    evalCond :: Free (TypeCondF Desugar) (TypeExpF Desugar WHNF) -> TypeExpF Desugar WHNF
+    evalCond = iter $ \(HasCondF e ty) ->
+        ty { typeExpCond = HasCond e <> typeExpCond ty }
+
 
 extend :: BindName Desugar -> TypeExtension Desugar
             -> TypeRefine Desugar -> TypeExpF Desugar WHNF

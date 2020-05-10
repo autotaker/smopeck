@@ -32,9 +32,9 @@ import           Smopeck.Spec.Desugar
 import           Smopeck.Spec.Lexer
 import           Smopeck.Spec.Parser
 import           Smopeck.Spec.Syntax        hiding (Method, TypeEnv, TypeExp)
-import           Smopeck.Spec.TypeExp       (BindName (..), TypeExpF (..),
-                                             TypeName (..), evalTypeEnv,
-                                             evalTypeExp)
+import           Smopeck.Spec.TypeExp       (BindName (..), TypeCond (NoCond),
+                                             TypeExpF (..), TypeName (..),
+                                             evalTypeEnv, evalTypeExp)
 import           Smopeck.Spec.Validator
 import           System.IO
 
@@ -57,7 +57,7 @@ runApp MockConfig{ listenAddr = TcpConfig {..}, mockSmopeckFile = file } = do
                 & desugarTypeEnv
                 & evalTypeEnv
         let fType ext =
-                LElem (TypeExpF (User "Endpoint") (BindName "it") (M.fromList ext) [])
+                LElem (TypeExpF (User "Endpoint") (BindName "it") (M.fromList ext) [] NoCond)
                   & desugarTypeExp []
                   & evalTypeExp typeEnv
                   & (\case

@@ -20,6 +20,7 @@ tokens :-
   <0> $small $alphanum*                     { token $ \s len -> LowerId $ lexeme s len }
   <0> "|"                                   { token $ \_ _ -> Join }
   <0> "&"                                   { token $ \_ _ -> Meet }
+  <0> "?"                                   { token $ \_ _ -> Cond }
   <0> "||"                                  { token $ \_ _ -> Or }
   <0> "&&"                                  { token $ \_ _ -> And }
   <0> "="                                   { token $ \_ _ -> Eq }
@@ -32,6 +33,7 @@ tokens :-
   <0> "-"                                   { token $ \_ _ -> Sub }
   <0> "*"                                   { token $ \_ _ -> Mul }
   <0> "/"                                   { token $ \_ _ -> Div }
+  <0> "%"                                   { token $ \_ _ -> Mod }
   <0> "("                                   { token $ \_ _ -> Lpar }
   <0> ")"                                   { token $ \_ _ -> Rpar }
   <0> "{"                                   { token $ \_ _ -> Lbra }
@@ -62,13 +64,14 @@ data Token =
     Type
   | Endpoint
   | TTrue | TFalse
-  | Eq | Join | Meet | Match
+  | Eq | Join | Meet | Cond
+  | Match 
   | Lpar | Rpar
   | Lbra | Rbra
   | And | Or
   | Lt | Gt | Lte | Gte
   | Lsq | Rsq
-  | Add | Sub | Mul | Div
+  | Add | Sub | Mul | Div | Mod
   | Colon
   | Comma
   | As

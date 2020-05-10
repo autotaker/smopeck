@@ -49,6 +49,8 @@ spec =
             parse "||" `shouldBe` Right [Or]
         it "lex `&&` as a logical and operator token" $
             parse "&&" `shouldBe` Right [And]
+        it "lex `?` as a conditional token" $
+            parse "?" `shouldBe` Right [Cond]
 
 
 
