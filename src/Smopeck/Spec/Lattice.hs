@@ -1,15 +1,16 @@
-{-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveTraversable  #-}
-{-# LANGUAGE ExplicitForAll     #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE GADTs              #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE Rank2Types         #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies       #-}
-{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE ConstraintKinds     #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE DeriveTraversable   #-}
+{-# LANGUAGE ExplicitForAll      #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeOperators       #-}
 module Smopeck.Spec.Lattice where
 import           Control.Monad
 import           Control.Monad.Free
@@ -41,6 +42,16 @@ newtype VoidF a = VoidF Void
     deriving(Functor, Foldable, Traversable, Show, Eq, Ord)
 type Lattice m = LatticeExt m VoidF
 
+
+fmapWithExt :: Functor f => (a -> b) -> (forall a. f a -> g a) -> LatticeExt m f a -> LatticeExt m g b
+fmapWithExt f h = go
+    where
+    go LBot        = LBot
+    go LTop        = LTop
+    go (LElem a)   = LElem $ f a
+    go (LJoin a b) = LJoin (go a) (go b)
+    go (LMeet a b) = LMeet (go a) (go b)
+    go (LExt ta)   = LExt $ h $ fmap go ta
 
 deriving instance Functor f => Functor (LatticeExt m f)
 deriving instance Foldable f => Foldable (LatticeExt m f)
