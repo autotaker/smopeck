@@ -41,7 +41,7 @@ instance Monad (ExpF mode) where
     (Var x) >>= f = f x
     (App op args) >>= f = App op (map (>>= f) args)
 
-data Op = Add | Sub | Mul | Div
+data Op = Add | Sub | Mul | Div | Mod
         | Eq | Lt | Gt | Lte | Gte | Match
         | And | Or | Func String
         deriving(Eq,Ord, Show)
@@ -90,6 +90,10 @@ interpret Sub [LNumber x, LNumber y] = LNumber $ x - y
 interpret Sub [LNumber x] = LNumber $ -x
 interpret Mul [LNumber x, LNumber y] = LNumber $ x * y
 interpret Div [LNumber x, LNumber y] = LNumber $ x / y
+interpret Mod [LNumber x, LNumber y] 
+    | Just ix <- toInt x, Just iy <- toInt y = LNumber $ fromIntegral $ ix `mod` iy
+    where toInt :: Scientific -> Maybe Int
+          toInt = toBoundedInteger 
 interpret Eq [x, y] = LBool $ x == y
 interpret Lt [x, y] = LBool $ x < y
 interpret Gt [x, y] = LBool $ x > y

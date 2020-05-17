@@ -14,9 +14,9 @@ type Main = Object @obj {
         length: 15,
         get(j): Object {
             fst: Int[ . = j + arr.length * 10],
-            snd: 'zero' ? j = 0 |
-                 'one' ? j = 1 |
-                 'many' ? j > 1
+            snd: ('zero' ? j = 0) |
+                 ('one' ? j = 1) |
+                 ('many' ? j > 1)
         }
     }
 }

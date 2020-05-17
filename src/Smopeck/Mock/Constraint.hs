@@ -79,7 +79,7 @@ chooseShape base ty = do
           LBool False -> pure False
           _ -> error $ "condition " ++ show e ++ " is evaluated to non Boolean: " ++ show v
       T.NoCond  -> pure True) $ toList ty
-  when (null cands) $ error "no candidates"
+  when (null cands) $ error $ "no candidates: " ++ show (base, ty)
   idx <- uniformR (0, length cands - 1) gen
   pure $ cands !! idx
 
@@ -240,7 +240,7 @@ toNumber :: Literal m -> Scientific
 toNumber (LNumber n) = n
 toNumber _           = error "cannot convert to number"
 
-parent :: Location -> Location
+parent :: LocationF (Root blob) Int -> LocationF (Root blob) Int
 parent (p `Get` _)   = p
 parent (p `Field` _) = p
 parent (Root _)      = error "no parent for root"

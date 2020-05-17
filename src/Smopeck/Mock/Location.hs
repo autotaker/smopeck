@@ -76,3 +76,10 @@ match (Get _ _) _ = False
 
 castRoot :: LocationF (Root RootAbs) a -> LocationF (Root m) a
 castRoot = unsafeCoerce
+
+
+mapRoot :: (root -> root') -> LocationF root a -> LocationF root' a
+mapRoot f = go
+  where
+    go (Root root) = Root (f root)
+    go (Chain p f) = go p `Chain` f

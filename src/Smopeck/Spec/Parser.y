@@ -8,7 +8,7 @@ module Smopeck.Spec.Parser(
     , parseExpr
     , parseTypeExp
 ) where
-import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Lte, Gte, Match, And,Or)
+import Smopeck.Spec.Lexer hiding (Eq, Lt, Gt, Add, Sub, Mul, Div, Mod, Lte, Gte, Match, And,Or)
 import qualified Smopeck.Spec.Lexer as L
 
 import Smopeck.Spec.Syntax
@@ -41,6 +41,7 @@ import Control.Monad.Free
     '-'      { L.Sub }
     '*'      { L.Mul }
     '/'      { L.Div }
+    '%'      { L.Mod }
     '|'      { Join }
     '&'      { Meet }
     ','      { Comma }
@@ -66,7 +67,7 @@ import Control.Monad.Free
 %left '&' '&&'
 %nonassoc '=' '<' '>' '<=' '>='
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left NEG
 
 %%
@@ -152,6 +153,7 @@ ExpF
     | ExpF '-' ExpF { App Sub [$1, $3] }
     | ExpF '*' ExpF { App Mul [$1, $3] }
     | ExpF '/' ExpF { App Div [$1, $3] }
+    | ExpF '%' ExpF { App Mod [$1, $3] }
     | '-' ExpF %prec NEG { App Sub [$2] }
 Literal : dqLiteral { LDQString $1 }
         | sqLiteral { LString $1 }

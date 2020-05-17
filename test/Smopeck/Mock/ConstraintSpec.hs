@@ -4,8 +4,10 @@
 module Smopeck.Mock.ConstraintSpec where
 
 
+import           Control.Exception.Base
 import           Control.Monad.Reader
 import           Data.Aeson
+import           Data.List               (isPrefixOf)
 import qualified Data.Map                as M
 import           Smopeck.Mock.Constraint hiding (TypeExp)
 import           Smopeck.Mock.Location
@@ -45,11 +47,22 @@ spec =
                 mockValue `shouldBe` expectedValue
         it "not gen unsatisfiable cond" $ do
             let input = fInt [] `withCond` (Exp $ Literal $ LBool False)
-            mockJson M.empty input `shouldThrow` errorCall "no candidates"
-        it "gen unsatisfiable cond" $ do
+            mockJson M.empty input `shouldThrow` \(ErrorCallWithLocation err _) ->
+                "no candidates:" `isPrefixOf` err
+        it "gen satisfiable cond" $ do
             let input = fInt [] `withCond` (Exp $ Literal $ LBool True)
             v <- mockJson M.empty input
             v `shouldSatisfy` (\case
                 Number _ -> True
                 _        -> False)
-
+        it "gen satisfiable cond" $ do
+            let tyInt = fCond (Exp $ App Eq [Var piyo, Var piyo]) (fInt [])
+                piyo = Root (Relative 1)
+                -- get(i) : Object { hoge : Int ? i = i}
+                fields = [ (FieldString "hoge", tyInt)]
+                tyArr = fArray (fInt []) tyObj
+                tyObj = fObject (M.fromList fields)
+            v <- mockJson M.empty tyArr
+            v `shouldSatisfy` (\case
+                Array _ -> True
+                _        -> False)

@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE LambdaCase           #-}
 module Smopeck.Spec.TypeExp where
 
 import           Control.Monad
@@ -31,6 +32,7 @@ data TypeExpF (mode :: Mode) (head :: HeadMode) where
         typeExpBind :: BindName mode,
         typeExpExt  :: TypeExtension mode,
         typeExpRef  :: TypeRefine mode,
+        -- Scope of condition expression does not include typeExpName
         typeExpCond :: TypeCond mode head
       } -> TypeExpF mode head
     LiteralType :: Literal Parsed -> TypeExpF Parsed head
@@ -177,8 +179,12 @@ evalTypeExp env tyExp =
         fMMeet = curry (join . uncurry (liftM2 intersect))
     }
     evalCond :: Free (TypeCondF Desugar) (TypeExpF Desugar WHNF) -> TypeExpF Desugar WHNF
-    evalCond = iter $ \(HasCondF e ty) ->
-        ty { typeExpCond = HasCond e <> typeExpCond ty }
+    evalCond = iter $ \(HasCondF (Exp e) ty) ->
+        ty { typeExpCond = HasCond (Exp (fmap pushVar e)) <> typeExpCond ty }
+        where pushVar :: LocationExp Desugar -> LocationExp Desugar
+              pushVar = mapRoot (\case 
+                Relative i -> Relative (i+1)
+                Absolute s -> Absolute s) 
 
 
 extend :: BindName Desugar -> TypeExtension Desugar
