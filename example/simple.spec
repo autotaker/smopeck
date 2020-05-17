@@ -11,10 +11,12 @@ type Main = Object @obj {
     booleanField: Bool [ .= obj.intField1 > 40 || obj.intField1 > obj.intField2],
     nullField: Null,
     arrayField: Array @arr {
-        length: 3,
+        length: 15,
         get(j): Object {
             fst: Int[ . = j + arr.length * 10],
-            snd: Hoge | Fuga
+            snd: 'zero' ? j = 0 |
+                 'one' ? j = 1 |
+                 'many' ? j > 1
         }
     }
 }

@@ -64,3 +64,9 @@ spec = do
             let tokens = [DQString "hoge"]
                 expected = LElem $ T.LiteralType (LDQString "hoge")
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
+        it "parse conditional type" $ do
+            -- Int ? 1 < 2
+            let tokens = [UpperId "Int", Cond, Number 1, Lt, Number 2]
+                e = T.Exp (App Syntax.Lt [Literal (LNumber 1), Literal (LNumber 2)])
+                expected = LExt (T.HasCondF e $ fTypeExp "Int" "." [] [])
+            runLexerMock parseTypeExp tokens `shouldBe` Right expected

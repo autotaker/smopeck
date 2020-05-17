@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE GADTs         #-}
 {-# LANGUAGE LambdaCase    #-}
 {-# LANGUAGE TupleSections #-}
 module Smopeck.Mock.Constraint where
@@ -66,10 +67,19 @@ genInstance lat = do
 
 
 
-chooseShape :: TypeExp -> SolveM TypeExpF
-chooseShape ty = do
+chooseShape :: ALocation -> TypeExp -> SolveM TypeExpF
+chooseShape base ty = do
   gen <- asks randState
-  let cands = toList ty
+  cands <- filterM (\tyf ->
+    case T.typeExpCond tyf of
+      T.HasCond e -> do
+        v <- evalExp base e >>= deref base
+        case v of
+          LBool True -> pure True
+          LBool False -> pure False
+          _ -> error $ "condition " ++ show e ++ " is evaluated to non Boolean: " ++ show v
+      T.NoCond  -> pure True) $ toList ty
+  when (null cands) $ error "no candidates"
   idx <- uniformR (0, length cands - 1) gen
   pure $ cands !! idx
 
@@ -148,7 +158,7 @@ evalL base loc' =
 
 evalT :: ALocation -> TypeExp -> SolveM Value
 evalT loc ty = do
-  tyF <- chooseShape ty
+  tyF <- chooseShape loc ty
   case T.typeExpName tyF of
     T.Prim T.PNumber -> do
       predicates <-

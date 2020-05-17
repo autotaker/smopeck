@@ -53,6 +53,7 @@ import Control.Monad.Free
     '('      { Lpar }
     ')'      { Rpar }
     '@'      { As }
+    '?'      { Cond }
     lower    { LowerId $$ }
     upper    { UpperId $$ }
     number   { Number $$ }
@@ -60,6 +61,7 @@ import Control.Monad.Free
     sqLiteral { SQString  $$ }
     sqRegex  { SQRegex $$ }
 
+%left '?'
 %left '|' '||'
 %left '&' '&&'
 %nonassoc '=' '<' '>' '<=' '>='
@@ -94,6 +96,7 @@ TypeExp : TypeExpNameBindExtRef { $1 }
         | '(' TypeExp ')' { $2 }
         | TypeExp '&' TypeExp { LMeet $1 $3 }
         | TypeExp '|' TypeExp { LJoin $1 $3 }
+        | TypeExp '?' Exp     { LExt $ T.HasCondF $3 $1 }
 
 TypeExtension 
     : '{' '}'                   { [] } 

@@ -90,6 +90,7 @@ test-suite unit-test
         Smopeck.AppSpec
         Smopeck.Spec.TypeUtil
         Smopeck.Spec.ExpSpec
+        Smopeck.Spec.TypeExpSpec
         Smopeck.Spec.ParserSpec
         Smopeck.Spec.LexerSpec
         Smopeck.Spec.DesugarSpec

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Smopeck.Mock.ConstraintSpec where
 
@@ -25,7 +26,6 @@ spec =
             let ty = fNumber [(Eq, Exp $ Literal (LNumber 0))]
             v <- mockJson M.empty ty
             v `shouldBe` toJSON (0 :: Int)
-            print v
         it "gen object" $ do
             let tyInt = fInt []
                 tySize = fInt [(Gt, Exp $ Literal (LNumber 0)), (Lte, Exp $ Literal (LNumber 10))]
@@ -43,4 +43,13 @@ spec =
                 let ty = fPrim prim M.empty [(Eq, Exp $ Var (Root (Absolute "ctx") `Field` field))]
                 mockValue <- mockJsonWithEnv M.empty (M.fromList [("ctx", v)]) ty
                 mockValue `shouldBe` expectedValue
+        it "not gen unsatisfiable cond" $ do
+            let input = fInt [] `withCond` (Exp $ Literal $ LBool False)
+            mockJson M.empty input `shouldThrow` errorCall "no candidates"
+        it "gen unsatisfiable cond" $ do
+            let input = fInt [] `withCond` (Exp $ Literal $ LBool True)
+            v <- mockJson M.empty input
+            v `shouldSatisfy` (\case
+                Number _ -> True
+                _        -> False)
 

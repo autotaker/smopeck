@@ -24,3 +24,9 @@ fArray :: TypeExp 'Desugar 'HDefault -> TypeExp 'Desugar 'HDefault -> TypeExp 'D
 fArray size elt = fPrim PArray (M.fromList [
     (FieldString "length", size),
     (FieldIndex BindDebrujin , elt)]) []
+
+fCond :: Exp 'Desugar -> TypeExp 'Desugar 'HDefault -> TypeExp 'Desugar 'HDefault
+fCond e ty = LExt $ HasCondF e ty
+
+withCond :: TypeExp mode 'WHNF -> Exp mode -> TypeExp mode 'WHNF
+withCond ty e = fmap (\tyf -> tyf{ typeExpCond = HasCond e}) ty
