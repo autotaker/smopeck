@@ -80,6 +80,17 @@ endpoint "/search" GET {
     }
 }
 
+endpoint "/cond" POST {
+    request: JsonRequest {
+        body: Object @obj {
+            type: 'int' | 'string',
+            value: 
+                  Int ? obj.type = 'int' 
+                | (String ? obj.type = 'string')
+        }
+    }
+}
+
 endpoint "/post" POST {
     request: JsonRequest {
         body: Object {

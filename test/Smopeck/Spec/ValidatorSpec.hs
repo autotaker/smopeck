@@ -5,7 +5,10 @@ import           Control.Monad.Except
 import           Data.Aeson
 import           Data.Either
 import qualified Data.Map               as M
+import           Smopeck.Mock.Location
+import           Smopeck.Spec.Exp
 import           Smopeck.Spec.Lattice
+import           Smopeck.Spec.TypeExp
 import           Smopeck.Spec.TypeUtil
 import           Smopeck.Spec.Validator
 import           Test.Hspec
@@ -58,6 +61,19 @@ spec = do
                 ty = LJoin ty1 ty2
             runExcept (validateJson tyEnv env "a" ty) `shouldBe` Right ()
             runExcept (validateJson tyEnv env "b" ty) `shouldBe` Right ()
+        it "reject value if type condition does not hold" $ do
+            let tyEnv = M.empty
+                env = M.fromList [ ("a", Bool False) ]
+                cond = Exp $ Var (Root (Absolute "a"))
+                ty = fBool [] `withCond` cond
+            runExcept (validateJson tyEnv env "a" ty) `shouldBe` Left "type cond does not hold"
+        it "accept value if type condition holds" $ do
+            let tyEnv = M.empty
+                env = M.fromList [ ("a", Bool True) ]
+                cond = Exp $ Var (Root (Absolute "a"))
+                ty = fBool [] `withCond` cond
+            runExcept (validateJson tyEnv env "a" ty) `shouldBe` Right ()
+
     describe "Smopec.Spec.Validator.parseParam" $ do
         it "can parse hoge as String" $
             runExcept (parseParam "hoge" (fString [])) `shouldBe` Right (String "hoge")

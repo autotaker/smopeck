@@ -42,7 +42,42 @@
 
 ## Conditional Types
 You can write conditional type with the following syntax.
+
 ```
-<TypeExp> ::= <Exp> '?' <TypeExp>
+<TypeExp> ::= <TypExp> '?' <Exp>
 ```
-`e ? ty` is read as "this type accepts a value of `ty` if the condition `e` is true, and otherwise this type has no inhabitans".
+
+`ty ? e` is read as "this type accepts a value of `ty` if the condition `e` is true, and otherwise this type has no inhabitans".
+
+## Optional Fields
+Optional fields for objects are written with the following syntax.
+
+```
+<OptionaAssoc> ::= <Field> '?:' <TypeExp>
+```
+
+For example,
+
+```
+Object @ obj{
+    intField : Int
+    optionalField ?: Object {
+        key: String,
+        size: Int,
+        ord: 'asc' | 'desc'
+    }
+}
+```
+
+Optinal fields are accessible with the following accessors 
+`obj.optionalField?.key`.
+This will introduce monadic computation.
+In monadic computation, optional failures are ignored.
+
+For example `Int[ . > obj.optionalField?.size ]` is equal to
+`Int [ . > 10 ]` for object `{ optionalField : { size : 10 }}`,
+and is equal to `Int []` if `optinalField` is not set.
+
+You can set default value for optinal computation with `?>` operator.
+`Int [ . > (obj.optinalField?.size + 1) ?> 3 ]` is equal to
+`Int [ . > 4 ]` if `optinalField` is not set.

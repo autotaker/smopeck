@@ -62,9 +62,9 @@ import Control.Monad.Free
     sqLiteral { SQString  $$ }
     sqRegex  { SQRegex $$ }
 
-%left '?'
 %left '|' '||'
 %left '&' '&&'
+%left '?'
 %nonassoc '=' '<' '>' '<=' '>='
 %left '+' '-'
 %left '*' '/' '%'

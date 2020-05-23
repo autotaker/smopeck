@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE RecordWildCards #-}
 module Smopeck.Spec.Validator where
 
@@ -53,8 +54,11 @@ validate tyEnv env = goLattice
         fJElem = go it
     }
     go :: ALocation -> TypeExpF Desugar WHNF -> Except String ()
-    go it TypeExpF{..} =
-        let value = env M.! it in
+    go it TypeExpF{..} = do
+        let value = env M.! it
+            checkCond (HasCond e) = evalExp env it e == LBool True
+            checkCond NoCond      = True
+        unless (checkCond typeExpCond) $ throwError "type cond does not hold"
         case (typeExpName, value) of
             (Prim PNull, VNull)       -> pure ()
             (Prim PNumber, VNumber n) -> goRefs it (LNumber n) typeExpRef
@@ -82,6 +86,7 @@ validate tyEnv env = goLattice
             throwError $
                 "expected " ++ show it ++ show op ++ show e ++ "\n"
                 ++ "but found" ++ show lhs ++ show op ++ show rhs
+
 
 parseParam :: String -> TypeExp Desugar WHNF -> Except String A.Value
 parseParam val = cata CataJoin {
