@@ -10,7 +10,6 @@ import           Control.Lens
 import           Control.Monad.Except
 import qualified Data.Aeson                 as A
 import           Data.Aeson.Lens
-import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.CaseInsensitive       as CI
 import           Data.Function
@@ -25,16 +24,14 @@ import           Debug.Trace
 import           Network.HTTP.Types
 import           Network.Wai
 import qualified Network.Wai.Handler.Warp   as Warp
-import           Paths_smopeck
 import           Smopeck.Config
 import           Smopeck.Mock.Constraint
-import           Smopeck.Spec.Desugar
-import           Smopeck.Spec.Lexer
-import           Smopeck.Spec.Parser
+import           Smopeck.Spec.Preprocess
 import           Smopeck.Spec.Syntax        hiding (Method, TypeEnv, TypeExp)
-import           Smopeck.Spec.TypeExp       (BindName (..), TypeCond (NoCond),
-                                             TypeExpF (..), TypeName (..),
-                                             evalTypeEnv, evalTypeExp)
+import           Smopeck.Spec.TypeExp       (BindName (..), Route,
+                                             TypeCond (NoCond), TypeExpF (..),
+                                             TypeName (..), evalTypeEnv,
+                                             evalTypeExp)
 import           Smopeck.Spec.Validator
 import           System.IO
 
@@ -45,37 +42,16 @@ runApp MockConfig{ listenAddr = TcpConfig {..}, mockSmopeckFile = file } = do
             Warp.defaultSettings
                 & Warp.setPort tcpPort
                 & Warp.setHost (fromString tcpHost)
-    prelude <- getDataFileName "data/assets/prelude.spec"
     res <- runExceptT $ do
-        preludeContent <- liftIO $ readFile prelude
-        content <- liftIO $ readFile file :: ExceptT String IO String
-        defsPrelude <- ExceptT (pure $ runAlex preludeContent $ runLexer parse)
-        defsUser <- ExceptT (pure $ runAlex content $ runLexer parse)
-
-        let defs = defsPrelude ++ defsUser
-            typeEnv = M.fromList [ (tyName, def) | TypeDef tyName def <- defs ]
-                & desugarTypeEnv
-                & evalTypeEnv
-        let fType ext =
-                LElem (TypeExpF (User "Endpoint") (BindName "it") (M.fromList ext) [] NoCond)
-                  & desugarTypeExp []
-                  & evalTypeExp typeEnv
-                  & (\case
-                    LElem TypeExpF{ typeExpExt = ext } ->
-                        let tyRes = evalTypeExp typeEnv $ ext M.! FieldString "response"
-                            tyParam = evalTypeExp typeEnv $ ext M.! FieldString "parameter"
-                            tyReq = evalTypeExp typeEnv $ ext M.! FieldString "request" in
-                        (tyParam, tyReq, tyRes))
-            fMethod = BS.pack
-        let endpoints = [ (route, fMethod method, fType ext) | EndpointDef route method ext <- defs ]
+        (typeEnv, endpoints) <- preprocess file
         liftIO $ Warp.runSettings settings (app typeEnv endpoints)
     case res of { Left err -> hPrint stderr err; Right () -> pure ()}
 
-app :: TypeEnv -> [(Route, Method, (TypeExp, TypeExp, TypeExp))] -> Application
-app env defs req respond = go (sortOn (\(a,_,_) -> -length a) defs)
+app :: TypeEnv -> [DesugarEndpoint] -> Application
+app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs)
     where
         go [] = responseNotFound
-        go ((route,method,(tyParam, tyReq, tyRes)):defs)
+        go ((DesugarEndpoint route method tyParam tyReq tyRes):defs)
             | Just param <- match route method tyParam = responseOk tyReq tyRes param
             | otherwise = go defs
         responseOk tyReq tyRes param = do

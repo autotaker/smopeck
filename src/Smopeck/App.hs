@@ -7,6 +7,7 @@ module Smopeck.App
     )
 where
 import           Control.Monad.Reader
+import qualified Smopeck.App.Check    as Check
 import qualified Smopeck.App.Mock     as Mock
 import qualified Smopeck.App.Proxy    as Proxy
 import qualified Smopeck.App.Test     as Test
@@ -18,6 +19,7 @@ class MonadIO m => AppM m where
     runMockApp :: MockConfig -> m ()
     runTestApp :: TestConfig -> m ()
     runProxyApp :: ProxyConfig -> m ()
+    runCheckApp :: CheckConfig -> m ()
 
 newtype DefaultAppM a = DefaultAppM { runDefaultAppM :: IO a }
     deriving(Functor, Applicative, Monad, MonadIO)
@@ -27,6 +29,7 @@ instance AppM DefaultAppM where
     runMockApp = liftIO . Mock.runApp
     runTestApp = liftIO . Test.runApp
     runProxyApp = liftIO . Proxy.runApp
+    runCheckApp = liftIO . Check.runApp
 
 
 main :: AppM m => m ()
@@ -37,4 +40,5 @@ main = do
         Mock conf  -> runMockApp conf
         Test conf  -> runTestApp conf
         Proxy conf -> runProxyApp conf
+        Check conf -> runCheckApp conf
 

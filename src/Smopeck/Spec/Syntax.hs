@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 module Smopeck.Spec.Syntax(
     TopLevelDef(..), Field(..), TypeExp.BindName(..),
-    Route, Method, VarName, UserType, TypeExp, TypeEnv, Primitive,
+    Method, VarName, UserType, TypeExp, TypeEnv, Primitive,
     TypeExtension, Exp(..), TypeRefine, Lattice, LatticeExt(..),
     module Smopeck.Spec.Exp,
     module Smopeck.Mock.Location,

@@ -16,6 +16,7 @@ library
     exposed-modules:
         Smopeck.App
         Smopeck.Config
+        Smopeck.App.Check
         Smopeck.App.Mock
         Smopeck.App.Proxy
         Smopeck.App.Test
@@ -28,6 +29,7 @@ library
         Smopeck.Spec.Syntax
         Smopeck.Spec.Validator
         Smopeck.Spec.RegexUtil
+        Smopeck.Spec.Preprocess
         Smopeck.Mock.Location
         Smopeck.Mock.Value
         Smopeck.Mock.Dependency
@@ -56,6 +58,7 @@ library
         wai ^>=3.2.2,
         warp ^>=3.3,
         http-types ^>=0.12.3,
+        http-client ^>=0.6.4,
         hashtables ^>= 1.2.3.4,
         mwc-random ^>= 0.14.0.0,
         lens >= 4.4 && < 5,

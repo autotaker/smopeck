@@ -4,6 +4,7 @@ module Smopeck.Config
     , TestConfig(..)
     , ProxyConfig(..)
     , TcpConfig(..)
+    , CheckConfig(..)
     , parseArgs
     , handleArgs
     )
@@ -11,7 +12,11 @@ where
 
 import           Options.Applicative
 
-data Command = Mock !MockConfig | Test !TestConfig | Proxy !ProxyConfig
+data Command =
+  Mock !MockConfig
+  | Test !TestConfig
+  | Proxy !ProxyConfig
+  | Check !CheckConfig
     deriving(Eq, Ord, Show)
 
 data TcpConfig = TcpConfig {
@@ -26,8 +31,12 @@ data MockConfig = MockConfig {
 
 data TestConfig = TestConfig {
     smopeckFile :: !FilePath
-}
-    deriving(Eq, Ord, Show)
+} deriving(Eq, Ord, Show)
+
+data CheckConfig = CheckConfig {
+  targetAddr       :: !TcpConfig,
+  checkSmopeckFile :: !FilePath
+} deriving(Eq, Ord, Show)
 
 data ProxyConfig = ProxyConfig
     deriving(Eq, Ord, Show)
@@ -53,6 +62,15 @@ proxyOpts = info parser flags
     parser = pure (Proxy ProxyConfig)
     flags  = progDesc "Proxy mode" <> fullDesc
 
+checkOpts = info parser flags
+  where
+    parser = Check <$> (CheckConfig <$> tcpConfigP <*> strArgument (metavar "SPEC"))
+    tcpConfigP =
+        TcpConfig
+            <$> strOption (long "host" <> short 'h' <> metavar "HOST")
+            <*> option auto (long "port" <> short 'p' <> metavar "PORT")
+    flags = progDesc   "Mock mode" <> fullDesc
+
 opts = info (parser <**> helper) fullDesc
   where
     parser =
@@ -60,6 +78,7 @@ opts = info (parser <**> helper) fullDesc
             $  command "mock"  mockOpts
             <> command "test"  testOpts
             <> command "proxy" proxyOpts
+            <> command "check" checkOpts
 
 parseArgs :: [String] -> Maybe Command
 parseArgs = getParseResult . execParserPure (prefs mempty) opts

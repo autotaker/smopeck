@@ -12,6 +12,7 @@ data MockService = MockService {
   , mockRunMockApp  :: MockConfig -> IO ()
   , mockRunTestApp  :: TestConfig -> IO ()
   , mockRunProxyApp :: ProxyConfig -> IO ()
+  , mockRunCheckApp :: CheckConfig -> IO ()
 }
 
 newtype MockAppM a = MockAppM { runMockAppM :: ReaderT MockService IO a }
@@ -22,6 +23,7 @@ instance AppM MockAppM where
     runMockApp conf = asks mockRunMockApp >>= liftIO . ((&) conf)
     runTestApp conf = asks mockRunTestApp >>= liftIO . ((&) conf)
     runProxyApp conf = asks mockRunProxyApp >>= liftIO . ((&) conf)
+    runCheckApp conf = asks mockRunCheckApp >>= liftIO . ((&) conf)
 
 spec :: Spec
 spec =
@@ -30,7 +32,8 @@ spec =
                 mockGetCommand = assertFailure "should not be called",
                 mockRunMockApp = const $ assertFailure "should not be called",
                 mockRunTestApp = const $ assertFailure "should not be called",
-                mockRunProxyApp = const $ assertFailure "should not be called"
+                mockRunProxyApp = const $ assertFailure "should not be called",
+                mockRunCheckApp = const $ assertFailure "should not be called"
             }
         it "execute MockApp" $ do
             let config = MockConfig (TcpConfig "localhost" 8888) "example.spec"
@@ -51,6 +54,13 @@ spec =
                 mockService = mockServiceBase {
                     mockGetCommand = pure (Proxy config),
                     mockRunProxyApp = \conf -> conf `shouldBe` config
+                }
+            runReaderT (runMockAppM main) mockService
+        it "execute CheckApp" $ do
+            let config = CheckConfig (TcpConfig "localhost" 8888) "example.spec"
+                mockService = mockServiceBase {
+                    mockGetCommand = pure (Check config),
+                    mockRunCheckApp = \conf -> conf `shouldBe` config
                 }
             runReaderT (runMockAppM main) mockService
 
