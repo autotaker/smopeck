@@ -27,6 +27,7 @@ import qualified Network.Wai.Handler.Warp   as Warp
 import           Smopeck.Config
 import           Smopeck.Mock.Constraint
 import           Smopeck.Spec.Preprocess
+import           Smopeck.Spec.Route
 import           Smopeck.Spec.Syntax        hiding (Method, TypeEnv, TypeExp)
 import           Smopeck.Spec.TypeExp       (BindName (..), Route,
                                              TypeCond (NoCond), TypeExpF (..),
@@ -68,7 +69,7 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
                                      "body" A..= (reqBody :: A.Value) ]
                 valEnv = M.fromList [ ("request", request),
                                       ("parameter", param) ]
-            case runExcept $ validateJson env valEnv "request" tyReq of
+            case validateJson env valEnv "request" tyReq of
                 Left err -> responseInvalid $ err ++ "\ntyReq: " ++ show tyReq ++ "\nenv: " ++ show valEnv
                 Right () -> do
                     v <- mockJsonWithEnv env valEnv tyRes
@@ -109,7 +110,7 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
             LElem TypeExpF{ typeExpExt = ext } = tyParam
             LElem TypeExpF{ typeExpExt = queryExt } = evalTypeExp env $ ext  M.! FieldString "query"
             LElem TypeExpF{ typeExpExt = pathExt } = evalTypeExp env $ ext  M.! FieldString "path"
-            matchMethod = requestMethod req == method
+            matchMethod = parseMethod (requestMethod req) == Right method
             matchQuery =
                 fmap A.object
                   $ forM (M.assocs queryExt)
@@ -139,16 +140,4 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
                     go _ _ = Nothing
                 A.object <$> go routeSeq path
 
-data RouteElem = Elem String | Param String
-    deriving (Show)
-splitRoute :: Route -> [RouteElem]
-splitRoute "/" = []
-splitRoute route = unfoldr (\case
-    '/':':':s ->
-        let (param, s') = span (/= '/') s in
-        Just (Param param, s')
-    '/':s ->
-        let (e, s') = span (/= '/') s in
-        Just (Elem e, s')
-    [] -> Nothing) route
 

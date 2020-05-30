@@ -18,7 +18,7 @@ import           System.IO
 
 data DesugarEndpoint = DesugarEndpoint {
         endpointRoute    :: Route,
-        endpointMethod   :: Method,
+        endpointMethod   :: StdMethod,
         endpointParam    :: TypeExp Desugar WHNF,
         endpointRequest  :: TypeExp Desugar WHNF,
         endpointResponse :: TypeExp Desugar WHNF
@@ -43,8 +43,12 @@ preprocess file = do
                 LElem TypeExpF{ typeExpExt = ext } ->
                     let tyRes = evalTypeExp typeEnv $ ext M.! FieldString "response"
                         tyParam = evalTypeExp typeEnv $ ext M.! FieldString "parameter"
-                        tyReq = evalTypeExp typeEnv $ ext M.! FieldString "request" in
-                    DesugarEndpoint route (BS.pack method) tyParam tyReq tyRes)
+                        tyReq = evalTypeExp typeEnv $ ext M.! FieldString "request"
+                        stdMethod = case parseMethod (BS.pack method) of
+                            Left err -> error $ show err
+                            Right v  -> v
+                        in
+                    DesugarEndpoint route stdMethod tyParam tyReq tyRes)
         endpoints = [ fType route method ext | EndpointDef route method ext <- defs ]
     pure (typeEnv, endpoints)
 

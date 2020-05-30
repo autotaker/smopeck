@@ -22,8 +22,8 @@ import           Text.Read
 
 
 validateJson :: WHNFTypeEnv Desugar -> M.Map String A.Value
-                -> String -> TypeExp Desugar WHNF -> Except String ()
-validateJson tyEnv env x = validate tyEnv env' loc
+                -> String -> TypeExp Desugar WHNF -> Either String ()
+validateJson tyEnv env x = runExcept . validate tyEnv env' loc
     where
     loc = Root (Absolute x)
     env' = M.fromList $ M.assocs env >>= unfold

@@ -34,7 +34,7 @@ data TestConfig = TestConfig {
 } deriving(Eq, Ord, Show)
 
 data CheckConfig = CheckConfig {
-  targetAddr       :: !TcpConfig,
+  targetURL        :: !String,
   checkSmopeckFile :: !FilePath
 } deriving(Eq, Ord, Show)
 
@@ -64,11 +64,8 @@ proxyOpts = info parser flags
 
 checkOpts = info parser flags
   where
-    parser = Check <$> (CheckConfig <$> tcpConfigP <*> strArgument (metavar "SPEC"))
-    tcpConfigP =
-        TcpConfig
-            <$> strOption (long "host" <> short 'h' <> metavar "HOST")
-            <*> option auto (long "port" <> short 'p' <> metavar "PORT")
+    parser = Check <$> (CheckConfig <$> urlP <*> strArgument (metavar "SPEC"))
+    urlP = strOption (long "target" <> short 't' <> metavar "URL")
     flags = progDesc   "Mock mode" <> fullDesc
 
 opts = info (parser <**> helper) fullDesc
