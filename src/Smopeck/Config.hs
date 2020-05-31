@@ -5,6 +5,7 @@ module Smopeck.Config
     , ProxyConfig(..)
     , TcpConfig(..)
     , CheckConfig(..)
+    , CommonConfig(..)
     , parseArgs
     , handleArgs
     )
@@ -41,8 +42,14 @@ data CheckConfig = CheckConfig {
 data ProxyConfig = ProxyConfig
     deriving(Eq, Ord, Show)
 
+data CommonConfig = CommonConfig {
+  verbose :: !Bool
+} deriving(Eq, Ord, Show)
 
-mockOpts, testOpts, proxyOpts, opts :: ParserInfo Command
+commonOpts :: Parser CommonConfig
+commonOpts = CommonConfig <$> switch (long "verbose" <> short 'v')
+
+mockOpts, testOpts, proxyOpts :: ParserInfo Command
 mockOpts = info parser flags
   where
     parser = Mock <$> (MockConfig <$> tcpConfigP <*> strArgument (metavar "SPEC"))
@@ -68,7 +75,8 @@ checkOpts = info parser flags
     urlP = strOption (long "target" <> short 't' <> metavar "URL")
     flags = progDesc   "Mock mode" <> fullDesc
 
-opts = info (parser <**> helper) fullDesc
+opts :: ParserInfo (CommonConfig, Command)
+opts = info (liftA2 (,) commonOpts parser <**> helper) fullDesc
   where
     parser =
         hsubparser
@@ -77,8 +85,9 @@ opts = info (parser <**> helper) fullDesc
             <> command "proxy" proxyOpts
             <> command "check" checkOpts
 
-parseArgs :: [String] -> Maybe Command
+parseArgs :: [String] -> Maybe (CommonConfig, Command)
 parseArgs = getParseResult . execParserPure (prefs mempty) opts
 
-handleArgs :: IO Command
+
+handleArgs :: IO (CommonConfig, Command)
 handleArgs = execParser opts

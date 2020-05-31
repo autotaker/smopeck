@@ -19,7 +19,6 @@ import           System.IO
 import           TextShow
 
 class MonadLoggerIO m  => AppM m where
-    getCommand :: m Command
     runMockApp :: MockConfig -> m ()
     runTestApp :: TestConfig -> m ()
     runProxyApp :: ProxyConfig -> m ()
@@ -29,16 +28,14 @@ newtype DefaultAppM a = DefaultAppM { runDefaultAppM :: LoggingT IO a }
     deriving(Functor, Applicative, Monad, MonadIO, MonadLogger, MonadLoggerIO)
 
 instance AppM DefaultAppM where
-    getCommand = liftIO handleArgs
     runMockApp = DefaultAppM . Mock.runApp
     runTestApp = liftIO . Test.runApp
     runProxyApp = liftIO . Proxy.runApp
     runCheckApp = DefaultAppM . Check.runApp
 
 
-main :: AppM m => m ()
-main = do
-    config <- getCommand
+main :: AppM m => Command -> m ()
+main config = do
     $(logInfo) ("Config: " <> showt (FromStringShow config))
     case config of
         Mock conf  -> runMockApp conf
