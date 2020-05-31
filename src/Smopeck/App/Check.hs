@@ -104,11 +104,10 @@ buildRequest base route method paramObj reqObj =
                       requestHeaders = headers,
                       path = path req <> pathRoute })
     where
-    body = traceShow (bodyObj, headers) $ RequestBodyLBS $ A.encode bodyObj
+    body = RequestBodyLBS $ A.encode bodyObj
     pathRoute = substRoute paramEnv route
     paramEnv = M.fromList $ map (first T.unpack) pathParams
     queryEnv = map (bimap T.encodeUtf8 (Just . T.encodeUtf8)) queryParams
-    query = undefined
     headers :: [(CI BS.ByteString, BS.ByteString)]
     headers =
         reqObj ^.. key "header"
