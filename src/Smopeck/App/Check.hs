@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 module Smopeck.App.Check (
     runApp
@@ -8,6 +9,7 @@ module Smopeck.App.Check (
 
 import           Control.Lens
 import           Control.Monad.Except
+import           Control.Monad.Logger
 import qualified Data.Aeson               as A
 import qualified Data.Aeson.Encode.Pretty as A
 import           Data.Aeson.Lens
@@ -22,8 +24,8 @@ import           Data.Maybe
 import           Data.Scientific
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
+import qualified Data.Text.Lazy           as LT
 import qualified Data.Text.Lazy.Builder   as LT
-import qualified Data.Text.Lazy.IO        as LT
 import           Network.HTTP.Client
 import           Network.HTTP.Types
 import           Paths_smopeck
@@ -34,39 +36,40 @@ import           Smopeck.Spec.Route
 import           Smopeck.Spec.TypeExp     (Route)
 import qualified Smopeck.Spec.Validator   as Validator
 import           System.IO
+import           TextShow
 
 import           Debug.Trace
-printJson :: MonadIO m => String -> A.Value -> m ()
-printJson key val = liftIO $ do
-    putStr $ key ++ ": "
-    LT.putStrLn $ LT.toLazyText $ A.encodePrettyToTextBuilder val
+
+prettyJSON :: A.Value -> T.Text
+prettyJSON val = LT.toStrict $ LT.toLazyText $ A.encodePrettyToTextBuilder val
 
 
 
-runApp :: CheckConfig -> IO ()
+runApp :: CheckConfig -> LoggingT IO ()
 runApp CheckConfig{ targetURL = base, checkSmopeckFile = file} = do
-    putStrLn "Hello World Check App!"
-    manager <- newManager defaultManagerSettings
+    $(logInfo) "Hello World Check App!"
+    manager <- liftIO $ newManager defaultManagerSettings
     res <- runExceptT $ do
         (typeEnv, endpoints) <- preprocess file
         forM_ endpoints $ \DesugarEndpoint{..} -> do
-            liftIO $ putStrLn $ "Endpoint: " ++ show endpointMethod  ++ " " ++ endpointRoute
+            $(logInfo) ("Endpoint: " <> showt (FromStringShow endpointMethod)
+                       <> " " <> showt endpointRoute)
             param <- liftIO $ Constraint.mockJson typeEnv endpointParam
-            printJson "Param" param
+            $(logDebug) $ "Param: " <>  prettyJSON param
             let env = M.fromList [ ("parameter", param) ]
             request <- liftIO $ Constraint.mockJsonWithEnv typeEnv env endpointRequest
-            printJson "Request" request
+            $(logDebug) $ "Request: " <>  prettyJSON request
             let req = buildRequest base endpointRoute endpointMethod param request
-            liftIO $ putStrLn $ "Request: " ++ show req
+            $(logDebug) $ "HttpRequest: " <> showt (FromStringShow req)
             res <- liftIO $ httpLbs req manager
             let response = fromResponse res
                 env' = M.fromList [ ("parameter", param)
                                  , ("request", request)
                                  , ("response", response)]
-            printJson "Response" response
+            $(logDebug) $ "Response: " <> prettyJSON response
             ExceptT $ pure $ Validator.validateJson typeEnv env' "response" endpointResponse
     case res of
-        Left err -> hPutStrLn stderr err
+        Left err -> $(logError) $ T.pack err
         Right _  -> pure ()
 
 fromResponse :: Response LBS.ByteString -> A.Value

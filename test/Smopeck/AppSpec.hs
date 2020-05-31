@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Smopeck.AppSpec where
+import           Control.Monad.Logger
 import           Control.Monad.Reader
 import           Data.Function
 import           Smopeck.App
@@ -15,8 +16,8 @@ data MockService = MockService {
   , mockRunCheckApp :: CheckConfig -> IO ()
 }
 
-newtype MockAppM a = MockAppM { runMockAppM :: ReaderT MockService IO a }
-    deriving(Functor, Applicative, Monad, MonadIO, MonadReader MockService)
+newtype MockAppM a = MockAppM { runMockAppM :: ReaderT MockService (NoLoggingT IO) a }
+    deriving(Functor, Applicative, Monad, MonadIO, MonadLogger, MonadLoggerIO, MonadReader MockService)
 
 instance AppM MockAppM where
     getCommand = asks mockGetCommand >>= liftIO
@@ -25,6 +26,7 @@ instance AppM MockAppM where
     runProxyApp conf = asks mockRunProxyApp >>= liftIO . ((&) conf)
     runCheckApp conf = asks mockRunCheckApp >>= liftIO . ((&) conf)
 
+run service = runNoLoggingT (runReaderT (runMockAppM main) service)
 spec :: Spec
 spec =
     describe "Smopeck.App" $ do
@@ -41,27 +43,27 @@ spec =
                     mockGetCommand = pure (Mock config),
                     mockRunMockApp = \conf -> conf `shouldBe` config
                 }
-            runReaderT (runMockAppM main) mockService
+            run mockService
         it "execute TestApp" $ do
             let config = TestConfig "example.spec"
                 mockService = mockServiceBase {
                     mockGetCommand = pure (Test config),
                     mockRunTestApp = \conf -> conf `shouldBe` config
                 }
-            runReaderT (runMockAppM main) mockService
+            run mockService
         it "execute ProxyApp" $ do
             let config = ProxyConfig
                 mockService = mockServiceBase {
                     mockGetCommand = pure (Proxy config),
                     mockRunProxyApp = \conf -> conf `shouldBe` config
                 }
-            runReaderT (runMockAppM main) mockService
+            run mockService
         it "execute CheckApp" $ do
-            let config = CheckConfig (TcpConfig "localhost" 8888) "example.spec"
+            let config = CheckConfig "http://localhost:8888" "example.spec"
                 mockService = mockServiceBase {
                     mockGetCommand = pure (Check config),
                     mockRunCheckApp = \conf -> conf `shouldBe` config
                 }
-            runReaderT (runMockAppM main) mockService
+            run mockService
 
 

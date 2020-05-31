@@ -1,6 +1,7 @@
 module Main where
 
-import qualified Smopeck.App as App
+import           Control.Monad.Logger
+import qualified Smopeck.App          as App
 
 main :: IO ()
-main = App.runDefaultAppM App.main
+main = runStdoutLoggingT (App.runDefaultAppM App.main)

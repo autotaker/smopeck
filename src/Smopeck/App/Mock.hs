@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Smopeck.App.Mock
     ( runApp
     , app
@@ -8,6 +9,7 @@ module Smopeck.App.Mock
 where
 import           Control.Lens
 import           Control.Monad.Except
+import           Control.Monad.Logger
 import qualified Data.Aeson                 as A
 import           Data.Aeson.Lens
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -37,7 +39,7 @@ import           Smopeck.Spec.Validator
 import           System.IO
 
 
-runApp :: MockConfig -> IO ()
+runApp :: MockConfig -> LoggingT IO ()
 runApp MockConfig{ listenAddr = TcpConfig {..}, mockSmopeckFile = file } = do
     let settings =
             Warp.defaultSettings
@@ -46,7 +48,9 @@ runApp MockConfig{ listenAddr = TcpConfig {..}, mockSmopeckFile = file } = do
     res <- runExceptT $ do
         (typeEnv, endpoints) <- preprocess file
         liftIO $ Warp.runSettings settings (app typeEnv endpoints)
-    case res of { Left err -> hPrint stderr err; Right () -> pure ()}
+    case res of
+        Left err -> $(logError) (T.pack err)
+        Right () -> pure ()
 
 app :: TypeEnv -> [DesugarEndpoint] -> Application
 app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs)

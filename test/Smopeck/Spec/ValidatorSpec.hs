@@ -21,58 +21,58 @@ spec = do
                 env = M.singleton "it" value
                 value = String "Hello"
                 ty = fString []
-            runExcept (validateJson tyEnv env "it" ty) `shouldBe` Right ()
+            validateJson tyEnv env "it" ty `shouldBe` Right ()
         it "0 is not String type" $ do
             let tyEnv = M.empty
                 env = M.singleton "it" value
                 value = String "hello"
                 ty = fNumber []
-            runExcept (validateJson tyEnv env "it" ty) `shouldSatisfy` isLeft
+            validateJson tyEnv env "it" ty `shouldSatisfy` isLeft
 
         it "0 has Number type" $ do
             let tyEnv = M.empty
                 env = M.singleton "it" value
                 value = Number 0
                 ty = fNumber []
-            runExcept (validateJson tyEnv env "it" ty) `shouldBe` Right ()
+            validateJson tyEnv env "it" ty `shouldBe` Right ()
         it "object has Object type" $ do
             let tyEnv = M.empty
                 env = M.singleton "it" value
                 value = object []
                 ty = fObject M.empty
-            runExcept (validateJson tyEnv env "it" ty) `shouldBe` Right ()
+            validateJson tyEnv env "it" ty `shouldBe` Right ()
         it "null has Null type" $ do
             let tyEnv = M.empty
                 env = M.singleton "it" value
                 value = Null
                 ty = fNull
-            runExcept (validateJson tyEnv env "it" ty) `shouldBe` Right ()
+            validateJson tyEnv env "it" ty `shouldBe` Right ()
         it "false has Bool type" $ do
             let tyEnv = M.empty
                 env = M.singleton "it" value
                 value = Bool False
                 ty = fBool []
-            runExcept (validateJson tyEnv env "it" ty) `shouldBe` Right ()
+            validateJson tyEnv env "it" ty `shouldBe` Right ()
         it "union type accepts both types" $ do
             let tyEnv = M.empty
                 env = M.fromList [ ("a", Bool False) , ("b", Null)]
                 ty1 = fBool []
                 ty2 = fNull
                 ty = LJoin ty1 ty2
-            runExcept (validateJson tyEnv env "a" ty) `shouldBe` Right ()
-            runExcept (validateJson tyEnv env "b" ty) `shouldBe` Right ()
+            validateJson tyEnv env "a" ty `shouldBe` Right ()
+            validateJson tyEnv env "b" ty `shouldBe` Right ()
         it "reject value if type condition does not hold" $ do
             let tyEnv = M.empty
                 env = M.fromList [ ("a", Bool False) ]
                 cond = Exp $ Var (Root (Absolute "a"))
                 ty = fBool [] `withCond` cond
-            runExcept (validateJson tyEnv env "a" ty) `shouldBe` Left "type cond does not hold"
+            validateJson tyEnv env "a" ty `shouldBe` Left "type cond does not hold"
         it "accept value if type condition holds" $ do
             let tyEnv = M.empty
                 env = M.fromList [ ("a", Bool True) ]
                 cond = Exp $ Var (Root (Absolute "a"))
                 ty = fBool [] `withCond` cond
-            runExcept (validateJson tyEnv env "a" ty) `shouldBe` Right ()
+            validateJson tyEnv env "a" ty `shouldBe` Right ()
 
     describe "Smopec.Spec.Validator.parseParam" $ do
         it "can parse hoge as String" $

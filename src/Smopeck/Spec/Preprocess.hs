@@ -3,6 +3,7 @@
 module Smopeck.Spec.Preprocess where
 
 import           Control.Monad.Except
+import           Control.Monad.Logger
 import qualified Data.ByteString.Char8 as BS
 import           Data.Function
 import qualified Data.Map              as M
@@ -24,7 +25,7 @@ data DesugarEndpoint = DesugarEndpoint {
         endpointResponse :: TypeExp Desugar WHNF
     }
 
-preprocess :: FilePath -> ExceptT String IO (WHNFTypeEnv Desugar, [DesugarEndpoint])
+preprocess :: FilePath -> ExceptT String (LoggingT IO) (WHNFTypeEnv Desugar, [DesugarEndpoint])
 preprocess file = do
     prelude <- liftIO $ getDataFileName "data/assets/prelude.spec"
     preludeContent <- liftIO $ readFile prelude

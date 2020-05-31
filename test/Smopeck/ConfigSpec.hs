@@ -8,8 +8,8 @@ spec = describe "Smopeck.Config.parseArgs" $ do
         $ parseArgs ["mock", "--host", "localhost", "--port", "8888", "example.spec"]
         `shouldBe` Just (Mock $ MockConfig (TcpConfig "localhost" 8888) "example.spec")
     it "should handle `check` command"
-        $ parseArgs ["check", "--host", "localhost", "--port", "8888", "example.spec"]
-        `shouldBe` Just (Check $ CheckConfig (TcpConfig "localhost" 8888) "example.spec")
+        $ parseArgs ["check", "--target", "http://localhost:8888/", "example.spec"]
+        `shouldBe` Just (Check $ CheckConfig "http://localhost:8888/" "example.spec")
     it "should handle `test` command" $
         parseArgs ["test", "example.spec"]
             `shouldBe` Just (Test $ TestConfig $ "example.spec")
