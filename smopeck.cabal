@@ -115,3 +115,5 @@ test-suite unit-test
         hashtables -any,
         monad-logger -any,
         aeson -any
+    build-tool-depends:
+      hspec-discover:hspec-discover
