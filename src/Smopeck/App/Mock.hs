@@ -1,7 +1,7 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Smopeck.App.Mock
   ( runApp,
@@ -9,42 +9,37 @@ module Smopeck.App.Mock
   )
 where
 
-import Control.Lens
-import Control.Monad.Except
-import Control.Monad.Logger
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as K
-import Data.Aeson.Lens
+import           Control.Lens
+import           Control.Monad.Except
+import           Control.Monad.Logger
+import qualified Data.Aeson                 as A
+import qualified Data.Aeson.Key             as K
+import           Data.Aeson.Lens
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.CaseInsensitive as CI
-import Data.Function
-import qualified Data.HashMap.Strict as HM
-import Data.List (sortOn, unfoldr)
-import qualified Data.Map as M
-import Data.Maybe
-import Data.String (fromString)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Debug.Trace
-import Network.HTTP.Types
-import Network.Wai
-import qualified Network.Wai.Handler.Warp as Warp
-import Smopeck.Config
-import Smopeck.Mock.Constraint
-import Smopeck.Spec.Preprocess
-import Smopeck.Spec.Route
-import Smopeck.Spec.Syntax hiding (Method, TypeEnv, TypeExp)
-import Smopeck.Spec.TypeExp
-  ( BindName (..),
-    Route,
-    TypeCond (NoCond),
-    TypeExpF (..),
-    TypeName (..),
-    evalTypeEnv,
-    evalTypeExp,
-  )
-import Smopeck.Spec.Validator
-import System.IO
+import qualified Data.CaseInsensitive       as CI
+import           Data.Function
+import qualified Data.HashMap.Strict        as HM
+import           Data.List                  (sortOn, unfoldr)
+import qualified Data.Map                   as M
+import           Data.Maybe
+import           Data.String                (fromString)
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import           Debug.Trace
+import           Network.HTTP.Types
+import           Network.Wai
+import qualified Network.Wai.Handler.Warp   as Warp
+import           Smopeck.Config
+import           Smopeck.Mock.Constraint
+import           Smopeck.Spec.Preprocess
+import           Smopeck.Spec.Route
+import           Smopeck.Spec.Syntax        hiding (Method, TypeEnv, TypeExp)
+import           Smopeck.Spec.TypeExp       (BindName (..), Route,
+                                             TypeCond (NoCond), TypeExpF (..),
+                                             TypeName (..), evalTypeEnv,
+                                             evalTypeExp)
+import           Smopeck.Spec.Validator
+import           System.IO
 
 runApp :: MockConfig -> LoggingT IO ()
 runApp MockConfig {listenAddr = TcpConfig {..}, mockSmopeckFile = file} = do
@@ -145,9 +140,9 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
                 mv <- M.lookup (T.pack field) param
                 v <- case mv of
                   Nothing -> pure ""
-                  Just s -> pure $ T.unpack s
+                  Just s  -> pure $ T.unpack s
                 case runExcept (parseParam v ty') of
-                  Left _ -> Nothing
+                  Left _  -> Nothing
                   Right v -> pure $ K.fromString field A..= v
 
         matchPath = do
@@ -159,7 +154,7 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
               go (Param p : rest) (txt : path) = do
                 let ty = evalTypeExp env $ pathExt M.! FieldString p
                 pair <- case runExcept (parseParam (T.unpack txt) ty) of
-                  Left _ -> Nothing
+                  Left _  -> Nothing
                   Right v -> pure $ K.fromString p A..= v
                 (pair :) <$> go rest path
               go [] [] = pure []

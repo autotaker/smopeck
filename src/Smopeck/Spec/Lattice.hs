@@ -65,12 +65,12 @@ instance Functor f => Applicative (LatticeExt m f) where
     (<*>) = ap
 
 instance Functor  f => Monad (LatticeExt m f) where
-    LBot >>= _ = LBot
-    LTop >>= _ = LTop
-    LElem a >>= f = f a
+    LBot >>= _      = LBot
+    LTop >>= _      = LTop
+    LElem a >>= f   = f a
     LJoin a b >>= f = LJoin (a >>= f) (b >>= f)
     LMeet a b >>= f = LMeet (a >>= f) (b >>= f)
-    LExt ta >>= f = LExt (fmap (>>= f) ta)
+    LExt ta >>= f   = LExt (fmap (>>= f) ta)
     -- ta :: f (LatticeExt m f a)
     -- f :: a -> LatticeExt m f b
     -- fmap (>>= f) ta ::  f (LatticeExt m f b))
@@ -135,10 +135,10 @@ toJoinExtNormalForm :: Traversable f => LatticeExt m f a -> Lattice Join (Lattic
 toJoinExtNormalForm = fix $ \go -> \case
     LBot      -> LBot
     LTop      -> LElem LTop
-    LElem a -> LElem (LElem (pure a))
+    LElem a   -> LElem (LElem (pure a))
     LJoin a b -> LJoin (go a) (go b)
     LMeet a b -> LMeet <$> go a <*> go b
-    LExt fa -> fmap Free . sequenceA <$> traverse go fa
+    LExt fa   -> fmap Free . sequenceA <$> traverse go fa
 
 toMeetNormalForm :: Lattice m a -> Lattice Meet (Lattice Join a)
 toMeetNormalForm LTop = LTop

@@ -1,47 +1,47 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Smopeck.App.Check
   ( runApp,
   )
 where
 
-import Control.Lens
-import Control.Monad.Except
-import Control.Monad.Logger
-import Data.Aeson (Value (Bool))
-import qualified Data.Aeson as A
+import           Control.Lens
+import           Control.Monad.Except
+import           Control.Monad.Logger
+import           Data.Aeson               (Value (Bool))
+import qualified Data.Aeson               as A
 import qualified Data.Aeson.Encode.Pretty as A
-import qualified Data.Aeson.Key as K
-import Data.Aeson.Lens
-import Data.Bifunctor
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
-import Data.CaseInsensitive (CI)
-import qualified Data.CaseInsensitive as CI
-import Data.Either
-import qualified Data.Map as M
-import Data.Maybe
-import Data.Scientific
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.Builder as LT
-import Debug.Trace
-import Network.HTTP.Client
-import Network.HTTP.Types
-import Paths_smopeck
-import Smopeck.Config
-import qualified Smopeck.Mock.Constraint as Constraint
-import Smopeck.Spec.Preprocess
-import Smopeck.Spec.Route
-import Smopeck.Spec.TypeExp (Route)
-import qualified Smopeck.Spec.Validator as Validator
-import System.IO
-import TextShow
+import qualified Data.Aeson.Key           as K
+import           Data.Aeson.Lens
+import           Data.Bifunctor
+import qualified Data.ByteString          as BS
+import qualified Data.ByteString.Lazy     as LBS
+import           Data.CaseInsensitive     (CI)
+import qualified Data.CaseInsensitive     as CI
+import           Data.Either
+import qualified Data.Map                 as M
+import           Data.Maybe
+import           Data.Scientific
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T
+import qualified Data.Text.Lazy           as LT
+import qualified Data.Text.Lazy.Builder   as LT
+import           Debug.Trace
+import           Network.HTTP.Client
+import           Network.HTTP.Types
+import           Paths_smopeck
+import           Smopeck.Config
+import qualified Smopeck.Mock.Constraint  as Constraint
+import           Smopeck.Spec.Preprocess
+import           Smopeck.Spec.Route
+import           Smopeck.Spec.TypeExp     (Route)
+import qualified Smopeck.Spec.Validator   as Validator
+import           System.IO
+import           TextShow
 
 prettyJSON :: A.Value -> T.Text
 prettyJSON val = LT.toStrict $ LT.toLazyText $ A.encodePrettyToTextBuilder val
@@ -78,7 +78,7 @@ runApp CheckConfig {targetURL = base, checkSmopeckFile = file} = do
       ExceptT $ pure $ Validator.validateJson typeEnv env' "response" endpointResponse
   case res of
     Left err -> $(logError) $ T.pack err
-    Right _ -> pure ()
+    Right _  -> pure ()
 
 fromResponse :: Response LBS.ByteString -> A.Value
 fromResponse resp =
@@ -104,7 +104,7 @@ fromResponse resp =
       case contentType of
         "application/json" ->
           case A.eitherDecode' body of
-            Left err -> error err
+            Left err  -> error err
             Right obj -> obj
         _ -> A.String $ T.decodeUtf8 $ LBS.toStrict body
 
@@ -153,8 +153,8 @@ buildRequest base route method paramObj reqObj =
       | otherwise = Nothing
     isPrimitive :: A.Value -> Bool
     isPrimitive (A.Object _) = False
-    isPrimitive (A.Array _) = False
-    isPrimitive A.Null = True
+    isPrimitive (A.Array _)  = False
+    isPrimitive A.Null       = True
     isPrimitive (A.Number _) = True
-    isPrimitive (A.Bool _) = True
+    isPrimitive (A.Bool _)   = True
     isPrimitive (A.String _) = True

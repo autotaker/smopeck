@@ -44,7 +44,8 @@ library
     hs-source-dirs: src 
     default-language: Haskell2010
     build-tool-depends: 
-        alex:alex , happy:happy
+        alex:alex, 
+        happy:happy,
     build-depends:
         base >=4.13,
         optparse-applicative ^>=0.15.1.0,

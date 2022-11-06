@@ -65,4 +65,4 @@ spec =
             v <- mockJson M.empty tyArr
             v `shouldSatisfy` (\case
                 Array _ -> True
-                _        -> False)
+                _       -> False)

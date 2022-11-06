@@ -3,8 +3,8 @@ module Smopeck.Spec.ParserSpec where
 
 import           Smopeck.Spec.Lexer
 import           Smopeck.Spec.Parser
-import           Smopeck.Spec.Syntax  hiding (And, Eq, Gt, Lt, Match, Or)
 import qualified Smopeck.Spec.Syntax  as Syntax
+import           Smopeck.Spec.Syntax  hiding (And, Eq, Gt, Lt, Match, Or)
 import qualified Smopeck.Spec.TypeExp as T
 import           Test.Hspec
 

@@ -37,8 +37,8 @@ instance Applicative (ExpF mode) where
     (<*>) = ap
 
 instance Monad (ExpF mode) where
-    Literal l >>= f = Literal l
-    (Var x) >>= f = f x
+    Literal l >>= f     = Literal l
+    (Var x) >>= f       = f x
     (App op args) >>= f = App op (map (>>= f) args)
 
 data Op = Add | Sub | Mul | Div | Mod
@@ -90,10 +90,10 @@ interpret Sub [LNumber x, LNumber y] = LNumber $ x - y
 interpret Sub [LNumber x] = LNumber $ -x
 interpret Mul [LNumber x, LNumber y] = LNumber $ x * y
 interpret Div [LNumber x, LNumber y] = LNumber $ x / y
-interpret Mod [LNumber x, LNumber y] 
+interpret Mod [LNumber x, LNumber y]
     | Just ix <- toInt x, Just iy <- toInt y = LNumber $ fromIntegral $ ix `mod` iy
     where toInt :: Scientific -> Maybe Int
-          toInt = toBoundedInteger 
+          toInt = toBoundedInteger
 interpret Eq [x, y] = LBool $ x == y
 interpret Lt [x, y] = LBool $ x < y
 interpret Gt [x, y] = LBool $ x > y
