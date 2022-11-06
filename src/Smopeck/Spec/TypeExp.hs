@@ -6,11 +6,11 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE GADTs                #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE LambdaCase           #-}
 module Smopeck.Spec.TypeExp where
 
 import           Control.Monad
@@ -182,9 +182,9 @@ evalTypeExp env tyExp =
     evalCond = iter $ \(HasCondF (Exp e) ty) ->
         ty { typeExpCond = HasCond (Exp (fmap pushVar e)) <> typeExpCond ty }
         where pushVar :: LocationExp Desugar -> LocationExp Desugar
-              pushVar = mapRoot (\case 
+              pushVar = mapRoot (\case
                 Relative i -> Relative (i+1)
-                Absolute s -> Absolute s) 
+                Absolute s -> Absolute s)
 
 
 extend :: BindName Desugar -> TypeExtension Desugar

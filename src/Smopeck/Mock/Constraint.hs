@@ -1,37 +1,37 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE GADTs         #-}
+{-# LANGUAGE LambdaCase    #-}
 {-# LANGUAGE TupleSections #-}
 
 module Smopeck.Mock.Constraint where
 
-import Control.Monad.Reader hiding (join)
-import qualified Data.Aeson as JSON
-import qualified Data.Aeson.Key as K
-import qualified Data.Aeson.KeyMap as KM
-import Data.Bifunctor
-import Data.Foldable
-import Data.Function
-import qualified Data.HashMap.Strict as HM
-import qualified Data.HashTable.IO as H
-import qualified Data.Map as M
-import Data.Scientific
-import qualified Data.Set as S
-import Data.String (fromString)
-import qualified Data.Text as T
-import qualified Data.Vector as V
-import Smopeck.Logic.Equality
-import Smopeck.Logic.Model
-import Smopeck.Logic.Number
-import Smopeck.Logic.Regex
-import Smopeck.Mock.Dependency
-import Smopeck.Mock.Location
-import Smopeck.Mock.Value
-import Smopeck.Spec.Exp hiding (interpret)
-import qualified Smopeck.Spec.Exp as Exp
-import Smopeck.Spec.Lattice
-import qualified Smopeck.Spec.TypeExp as T
-import System.Random.MWC
+import           Control.Monad.Reader    hiding (join)
+import qualified Data.Aeson              as JSON
+import qualified Data.Aeson.Key          as K
+import qualified Data.Aeson.KeyMap       as KM
+import           Data.Bifunctor
+import           Data.Foldable
+import           Data.Function
+import qualified Data.HashMap.Strict     as HM
+import qualified Data.HashTable.IO       as H
+import qualified Data.Map                as M
+import           Data.Scientific
+import qualified Data.Set                as S
+import           Data.String             (fromString)
+import qualified Data.Text               as T
+import qualified Data.Vector             as V
+import           Smopeck.Logic.Equality
+import           Smopeck.Logic.Model
+import           Smopeck.Logic.Number
+import           Smopeck.Logic.Regex
+import           Smopeck.Mock.Dependency
+import           Smopeck.Mock.Location
+import           Smopeck.Mock.Value
+import qualified Smopeck.Spec.Exp        as Exp
+import           Smopeck.Spec.Exp        hiding (interpret)
+import           Smopeck.Spec.Lattice
+import qualified Smopeck.Spec.TypeExp    as T
+import           System.Random.MWC
 
 type Exp = T.Exp Desugar
 
@@ -53,8 +53,8 @@ type SolveM a = ReaderT Context IO a
 
 data Context = Context
   { assignment :: HashTable ALocation (Either TypeExp Value),
-    typeEnv :: TypeEnv,
-    randState :: GenIO
+    typeEnv    :: TypeEnv,
+    randState  :: GenIO
   }
 
 initContext :: TypeEnv -> IO Context
@@ -75,7 +75,7 @@ genInstance lat = do
   gen <- asks randState
   r <- generate gen g
   case r of
-    Just v -> pure v
+    Just v  -> pure v
     Nothing -> error "no such value"
 
 chooseShape :: ALocation -> TypeExp -> SolveM TypeExpF
@@ -231,7 +231,7 @@ evalNumber :: ALocation -> Exp -> SolveM Scientific
 evalNumber base e = toNumber <$> (evalExp base e >>= deref base)
 
 deref :: ALocation -> Either Location (Literal Desugar) -> SolveM (Literal Desugar)
-deref _ (Right l) = pure l
+deref _ (Right l)   = pure l
 deref base (Left x) = toLiteral <$> evalL base x
 
 evalExp :: ALocation -> Exp -> SolveM (Either Location (Literal Desugar))
@@ -244,21 +244,21 @@ evalExp base (T.Exp e) = go e
         f e =
           go e >>= \case
             Right l -> pure l
-            Left x -> toLiteral <$> evalL base x
+            Left x  -> toLiteral <$> evalL base x
 
 toLiteral :: Value -> Literal Desugar
-toLiteral (VBool b) = LBool b
+toLiteral (VBool b)   = LBool b
 toLiteral (VNumber n) = LNumber n
-toLiteral VNull = LNull
+toLiteral VNull       = LNull
 toLiteral (VString s) = LString s
 toLiteral (VObject _) = error "cannot convert object to literal"
-toLiteral VArray = error "cannot convert array to literal"
+toLiteral VArray      = error "cannot convert array to literal"
 
 toNumber :: Literal m -> Scientific
 toNumber (LNumber n) = n
-toNumber _ = error "cannot convert to number"
+toNumber _           = error "cannot convert to number"
 
 parent :: LocationF (Root blob) Int -> LocationF (Root blob) Int
-parent (p `Get` _) = p
+parent (p `Get` _)   = p
 parent (p `Field` _) = p
-parent (Root _) = error "no parent for root"
+parent (Root _)      = error "no parent for root"

@@ -56,7 +56,7 @@ resolve base = go
         go (Root (Absolute s)) = Left $ Root (Absolute s)
         go (Root (Relative i)) = sub base i
         go (Chain p f)         = case go p of
-            Left l -> Left $ Chain l f
+            Left l  -> Left $ Chain l f
             Right _ -> error $ "Field Access for Index:" ++  show (base, p, f)
         sub loc 0         = Left loc
         sub (Field p f) i = sub p (i-1)

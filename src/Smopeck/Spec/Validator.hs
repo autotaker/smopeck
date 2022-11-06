@@ -1,27 +1,27 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Smopeck.Spec.Validator where
 
-import Control.Applicative
-import Control.Monad.Except
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as K
-import qualified Data.Aeson.KeyMap as KM
-import Data.Char
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map as M
-import Data.Scientific
-import qualified Data.Set as S
-import qualified Data.Text as T
-import qualified Data.Vector as V
-import Smopeck.Mock.Location
-import Smopeck.Mock.Value
-import Smopeck.Spec.Exp
-import Smopeck.Spec.Lattice
-import Smopeck.Spec.TypeExp
-import Text.Read
+import           Control.Applicative
+import           Control.Monad.Except
+import qualified Data.Aeson            as A
+import qualified Data.Aeson.Key        as K
+import qualified Data.Aeson.KeyMap     as KM
+import           Data.Char
+import qualified Data.HashMap.Strict   as HM
+import qualified Data.Map              as M
+import           Data.Scientific
+import qualified Data.Set              as S
+import qualified Data.Text             as T
+import qualified Data.Vector           as V
+import           Smopeck.Mock.Location
+import           Smopeck.Mock.Value
+import           Smopeck.Spec.Exp
+import           Smopeck.Spec.Lattice
+import           Smopeck.Spec.TypeExp
+import           Text.Read
 
 validateJson ::
   WHNFTypeEnv Desugar ->
@@ -67,7 +67,7 @@ validate tyEnv env = goLattice
     go it TypeExpF {..} = do
       let value = env M.! it
           checkCond (HasCond e) = evalExp env it e == LBool True
-          checkCond NoCond = True
+          checkCond NoCond      = True
       unless (checkCond typeExpCond) $ throwError "type cond does not hold"
       case (typeExpName, value) of
         (Prim PNull, VNull) -> pure ()
@@ -130,16 +130,16 @@ parseParam val =
           pure $ A.String $ T.pack val
         Prim PBool -> do
           b <- case map toLower val of
-            "true" -> pure True
+            "true"  -> pure True
             "false" -> pure False
-            _ -> throwError $ "not Boolean: " ++ val
+            _       -> throwError $ "not Boolean: " ++ val
           goRefs (LBool b) typeExpRef
           pure $ A.Bool b
         Prim PNull -> do
           case map toLower val of
             "null" -> pure ()
-            "" -> pure ()
-            _ -> throwError $ "not Null: " ++ val
+            ""     -> pure ()
+            _      -> throwError $ "not Null: " ++ val
           pure $ A.Null
         Prim PArray -> error "Array is not primitive"
         Prim PObject -> error "Object is not primitive"
@@ -158,17 +158,17 @@ evalExp env base (Exp e) = go e
     go (Var x) =
       case resolve base (toLocation x) of
         Left loc -> toLiteral $ env M.! loc
-        Right i -> LNumber (fromIntegral i)
+        Right i  -> LNumber (fromIntegral i)
     go (App op args) = interpret op (map go args)
     toLocation = fmap $ \e ->
       case evalExp env base e of
         LNumber i -> floor i
-        v -> error $ "index expected but found: " ++ show v
+        v         -> error $ "index expected but found: " ++ show v
 
 toLiteral :: Value -> Literal Desugar
-toLiteral (VBool b) = LBool b
+toLiteral (VBool b)   = LBool b
 toLiteral (VNumber n) = LNumber n
 toLiteral (VString s) = LString s
-toLiteral VNull = LNull
-toLiteral VArray = error "array is not a literal"
+toLiteral VNull       = LNull
+toLiteral VArray      = error "array is not a literal"
 toLiteral (VObject _) = error "object is not a literal"
