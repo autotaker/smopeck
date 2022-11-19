@@ -33,7 +33,6 @@ library
         Smopeck.Spec.Route
         Smopeck.Mock.Location
         Smopeck.Mock.Value
-        Smopeck.Mock.Dependency
         Smopeck.Mock.Constraint
         Smopeck.Logic.Number
         Smopeck.Logic.Model
@@ -101,7 +100,6 @@ test-suite unit-test
         Smopeck.Spec.ValidatorSpec
         Smopeck.Spec.RegexUtilSpec
         Smopeck.Mock.LocationSpec
-        Smopeck.Mock.DependencySpec
         Smopeck.Mock.ConstraintSpec
         Smopeck.Logic.NumberSpec
     default-language: Haskell2010

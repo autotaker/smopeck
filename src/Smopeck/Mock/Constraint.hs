@@ -5,32 +5,31 @@
 
 module Smopeck.Mock.Constraint where
 
-import           Control.Monad.Reader    hiding (join)
-import qualified Data.Aeson              as JSON
-import qualified Data.Aeson.Key          as K
-import qualified Data.Aeson.KeyMap       as KM
+import           Control.Monad.Reader   hiding (join)
+import qualified Data.Aeson             as JSON
+import qualified Data.Aeson.Key         as K
+import qualified Data.Aeson.KeyMap      as KM
 import           Data.Bifunctor
 import           Data.Foldable
 import           Data.Function
-import qualified Data.HashMap.Strict     as HM
-import qualified Data.HashTable.IO       as H
-import qualified Data.Map                as M
+import qualified Data.HashMap.Strict    as HM
+import qualified Data.HashTable.IO      as H
+import qualified Data.Map               as M
 import           Data.Scientific
-import qualified Data.Set                as S
-import           Data.String             (fromString)
-import qualified Data.Text               as T
-import qualified Data.Vector             as V
+import qualified Data.Set               as S
+import           Data.String            (fromString)
+import qualified Data.Text              as T
+import qualified Data.Vector            as V
 import           Smopeck.Logic.Equality
 import           Smopeck.Logic.Model
 import           Smopeck.Logic.Number
 import           Smopeck.Logic.Regex
-import           Smopeck.Mock.Dependency
 import           Smopeck.Mock.Location
 import           Smopeck.Mock.Value
-import qualified Smopeck.Spec.Exp        as Exp
-import           Smopeck.Spec.Exp        hiding (interpret)
+import qualified Smopeck.Spec.Exp       as Exp
+import           Smopeck.Spec.Exp       hiding (interpret)
 import           Smopeck.Spec.Lattice
-import qualified Smopeck.Spec.TypeExp    as T
+import qualified Smopeck.Spec.TypeExp   as T
 import           System.Random.MWC
 
 type Exp = T.Exp Desugar
