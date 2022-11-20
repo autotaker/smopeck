@@ -41,8 +41,11 @@ tokens :-
   <0> "["                                   { token $ \_ _ -> Lsq }
   <0> "]"                                   { token $ \_ _ -> Rsq }
   <0> ":"                                   { token $ \_ _ -> Colon }
+  <0> "?:"                                  { token $ \_ _ -> QColon }
   <0> ","                                   { token $ \_ _ -> Comma }
   <0> \.                                    { token $ \_ _ -> Dot }
+  <0> "?."                                  { token $ \_ _ -> QDot }
+  <0> "??"                                  { token $ \_ _ -> QQuestion }
   <0> "@"                                   { token $ \_ _ -> As }
   <0> \#                                    { token $ \_ _ -> Hash }
   <0> $digit+(\.$digit+)?                   { token $ \s len -> Number $ read $ lexeme s len }
@@ -76,6 +79,7 @@ data Token =
   | Comma
   | As
   | Hash | Dot
+  | QColon | QDot | QQuestion -- ?: ?. ??
   | DQString String
   | SQString String
   | SQRegex String

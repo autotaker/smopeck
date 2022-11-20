@@ -51,6 +51,12 @@ spec =
             parse "&&" `shouldBe` Right [And]
         it "lex `?` as a conditional token" $
             parse "?" `shouldBe` Right [Cond]
+        it "lex `??` as a null coalescing token" $
+            parse "??" `shouldBe` Right [QQuestion]
+        it "lex `?.` as a optional chaining operator" $
+            parse "?." `shouldBe` Right [QDot]
+        it "lex `?:` as a optional field operator" $
+            parse "?:" `shouldBe` Right [QColon]
 
 
 
