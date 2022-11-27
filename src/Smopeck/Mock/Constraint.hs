@@ -158,20 +158,28 @@ mockJsonWithEnv env venv ty = do
   mockJsonWithContext env ty ctx
 
 evalL :: ALocation -> Location -> SolveM Value
-evalL base loc' =
-  case resolve base loc' of
-    Right i -> pure $ VNumber (fromIntegral i)
-    Left loc -> do
-      tbl <- asks assignment
-      liftIO (H.lookup tbl loc) >>= \case
-        Just (Right v) -> pure v
-        Just (Left ty) -> do
-          v <- evalT loc ty
-          liftIO (H.insert tbl loc (Right v))
-          pure v
-        Nothing -> do
-          evalL base (parent loc')
-          evalL base loc'
+evalL base = go True
+  where
+    go first loc' =
+      case resolve base loc' of
+        Right i -> pure $ VNumber (fromIntegral i)
+        Left loc -> do
+          tbl <- asks assignment
+          liftIO (H.lookup tbl loc) >>= \case
+            Just (Right v) -> pure v
+            Just (Left ty) -> do
+              v <- evalT loc ty
+              liftIO (H.insert tbl loc (Right v))
+              pure v
+            Nothing 
+              | first -> do
+                -- location is not found, maybe because of laziness.
+                -- evaluate parent first
+                go first (parent loc')
+                go False loc'
+              | otherwise -> 
+                pure VUndefined
+                 
 
 evalT :: ALocation -> TypeExp -> SolveM Value
 evalT loc ty = do

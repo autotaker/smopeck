@@ -8,6 +8,7 @@ import           Smopeck.Spec.Syntax
 
 data Value =
     VNull
+    | VUndefined
     | VBool Bool
     | VNumber Scientific
     | VString String
