@@ -30,11 +30,21 @@ spec = do
         it "parse Boolean expression" $ do
             -- true == false || 0 < 1
             let tokens = [TTrue, Eq, TFalse, Or, Number 0, Lt, Number 1]
+                expected :: T.Exp 'Parsed
                 expected = T.Exp $
                     App Syntax.Or [
                         App Syntax.Eq [Literal (LBool True), Literal (LBool False)],
                         App Syntax.Lt [Literal (LNumber 0), Literal (LNumber 1)]
                     ]
+            runLexerMock parseExpr tokens `shouldBe` Right expected
+
+        it "parse an optional chain" $ do
+            -- hoge?.fuga.piyo 
+            let tokens = [LowerId "hoge", QDot, LowerId "fuga", Dot, LowerId "piyo" ]
+                hoge = Root (Absolute "hoge")
+                hoge_fuga = Field hoge "fuga" Optional
+                hoge_fuga_piyo = Field hoge_fuga "piyo" Mandatory
+                expected = T.Exp $ Var hoge_fuga_piyo
             runLexerMock parseExpr tokens `shouldBe` Right expected
 
     describe "Smopeck.Spec.Parser.parseTypeExp" $ do
@@ -69,4 +79,9 @@ spec = do
             let tokens = [UpperId "Int", Cond, Number 1, Lt, Number 2]
                 e = T.Exp (App Syntax.Lt [Literal (LNumber 1), Literal (LNumber 2)])
                 expected = LExt (T.HasCondF e $ fTypeExp "Int" "." [] [])
+            runLexerMock parseTypeExp tokens `shouldBe` Right expected
+        it "parse an optional fields" $ do
+            -- Object { name ?: String }
+            let tokens = [UpperId "Object", Lbra, LowerId "name", QColon, UpperId "String", Rbra]
+                expected = fTypeExp "Object" "." [(FieldString "name", (fTypeExp "String" "." [] [], Optional))] []
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
