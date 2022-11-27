@@ -33,8 +33,11 @@ validateJson tyEnv env x = runExcept . validate tyEnv env' loc
   where
     loc = Root (Absolute x)
     env' = M.fromList $ M.assocs env >>= unfold
+    -- unfold objects to mappings from locations to primitives
     unfold :: (String, A.Value) -> [(ALocation, Value)]
     unfold (root, val) = go (Root (Absolute root)) val
+    -- it: current location
+    -- v: value to unfold
     go it v = case v of
       A.Null -> pure (it, VNull)
       A.Bool b -> pure (it, VBool b)
@@ -42,12 +45,12 @@ validateJson tyEnv env x = runExcept . validate tyEnv env' loc
       A.String s -> pure (it, VString (T.unpack s))
       A.Object obj ->
         pure (it, VObject fields)
-          <> (KM.toList obj >>= \(key, val) -> go (it `Field` K.toString key) val)
+          <> (KM.toList obj >>= \(key, val) -> go (Field it (K.toString key) Mandatory) val)
         where
           fields = S.fromList $ map K.toString $ KM.keys obj
       A.Array arr ->
         pure (it, VArray)
-          <> pure (it `Field` "length", VNumber (fromIntegral n))
+          <> pure (Field it "length" Mandatory, VNumber (fromIntegral n))
           <> ([0 .. n - 1] >>= (\i -> go (it `Get` i) (arr V.! i)))
         where
           n = length arr
@@ -76,17 +79,19 @@ validate tyEnv env = goLattice
         (Prim PString, VString s) -> goRefs it (LString s) typeExpRef
         (Prim PBool, VBool b) -> goRefs it (LBool b) typeExpRef
         (Prim PObject, VObject fields) ->
-          forM_ (M.assocs typeExpExt) $ \(FieldString field, ty) -> do
-            unless (field `S.member` fields) $
-              throwError $
+          forM_ (M.assocs typeExpExt) $ \(FieldString field, (ty, opt)) ->
+            case (opt, field `S.member` fields) of
+              (Optional, False) -> pure ()
+              (Mandatory, False) -> throwError $
                 "field " ++ show field ++ " is not member of " ++ show it
-            goLattice (it `Field` field) (evalTypeExp tyEnv ty)
+              (_, True) ->
+                goLattice (Field it field Mandatory) (evalTypeExp tyEnv ty)
         (Prim PArray, VArray) -> do
-          let tyLen = typeExpExt M.! FieldString "length"
-          let VNumber l = env M.! (it `Field` "length")
-          goLattice (it `Field` "length") (evalTypeExp tyEnv tyLen)
+          let tyLen = fst $ typeExpExt M.! FieldString "length"
+          let VNumber l = env M.! Field it "length" Mandatory
+          goLattice (Field it "length" Mandatory) (evalTypeExp tyEnv tyLen)
           forM_ [0 .. floor l - 1] $ \i -> do
-            let tyElt = typeExpExt M.! FieldIndex BindDebrujin
+            let tyElt = fst $ typeExpExt M.! FieldIndex BindDebrujin
             goLattice (it `Get` i) (evalTypeExp tyEnv tyElt)
         (Prim ty, _) -> throwError $ "value " ++ show value ++ " is not " ++ show ty
 

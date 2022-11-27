@@ -41,17 +41,17 @@ spec = do
         it "parse type synonym def" $ do
             -- Json { name : String }
             let tokens = [UpperId "Json", Lbra, LowerId "name" , Colon, UpperId "String", Rbra]
-                expected = fTypeExp "Json" "." [(FieldString "name", fTypeExp "String" "." [] [])] []
+                expected = fTypeExp "Json" "." [(FieldString "name", (fTypeExp "String" "." [] [], Mandatory))] []
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
         it "field can contain upper identifier" $ do
             -- Json { Name: String }
             let tokens = [UpperId "Json", Lbra, UpperId "Name" , Colon, UpperId "String", Rbra]
-                expected = fTypeExp "Json" "." [(FieldString "Name", fTypeExp "String" "." [] [])] []
+                expected = fTypeExp "Json" "." [(FieldString "Name", (fTypeExp "String" "." [] [], Mandatory))] []
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
         it "field can contain figures if it is quoted" $ do
             -- Json { 'Content-Type' : String }
             let tokens = [UpperId "Json", Lbra, SQString "Content-Type" , Colon, UpperId "String", Rbra]
-                expected = fTypeExp "Json" "." [(FieldString "Content-Type", fTypeExp "String" "." [] [])] []
+                expected = fTypeExp "Json" "." [(FieldString "Content-Type", (fTypeExp "String" "." [] [], Mandatory))] []
             runLexerMock parseTypeExp tokens `shouldBe` Right expected
 
         it "parse regex match expression" $ do

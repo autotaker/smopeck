@@ -129,13 +129,13 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
       where
         param = M.fromList [(key, mvalue) | (key, mvalue) <- queryToQueryText $ queryString req]
         LElem TypeExpF {typeExpExt = ext} = tyParam
-        LElem TypeExpF {typeExpExt = queryExt} = evalTypeExp env $ ext M.! FieldString "query"
-        LElem TypeExpF {typeExpExt = pathExt} = evalTypeExp env $ ext M.! FieldString "path"
+        LElem TypeExpF {typeExpExt = queryExt} = evalTypeExp env $ fst $ ext M.! FieldString "query"
+        LElem TypeExpF {typeExpExt = pathExt} = evalTypeExp env $ fst $ ext M.! FieldString "path"
         matchMethod = parseMethod (requestMethod req) == Right method
         matchQuery =
           fmap A.object $
             forM (M.assocs queryExt) $
-              \(FieldString field, ty) -> do
+              \(FieldString field, (ty, _)) -> do
                 let ty' = evalTypeExp env ty
                 mv <- M.lookup (T.pack field) param
                 v <- case mv of
@@ -152,7 +152,7 @@ app env defs req respond = go (sortOn (\def -> -length (endpointRoute def)) defs
                 guard (T.pack s == txt)
                   >> go rest path
               go (Param p : rest) (txt : path) = do
-                let ty = evalTypeExp env $ pathExt M.! FieldString p
+                let ty = evalTypeExp env $ fst $ pathExt M.! FieldString p
                 pair <- case runExcept (parseParam (T.unpack txt) ty) of
                   Left _  -> Nothing
                   Right v -> pure $ K.fromString p A..= v

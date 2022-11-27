@@ -13,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Smopeck.Spec.TypeExp where
 
+import           Control.Arrow         ((***))
 import           Control.Monad
 import           Control.Monad.Free
 import           Data.Foldable
@@ -121,7 +122,7 @@ type DefaultTypeEnv m = M.Map UserType (TypeExp m HDefault)
 type WHNFTypeEnv m = M.Map UserType (TypeExp m WHNF)
 data Primitive = PObject | PString | PNumber | PInt | PArray | PBool | PNull
     deriving(Eq,Ord,Show)
-type TypeExtension mode = M.Map (Field (BindName mode)) (TypeExp mode HDefault)
+type TypeExtension mode = M.Map (Field (BindName mode)) (TypeExp mode HDefault, Optionality)
 
 newtype Exp mode = Exp (ExpF mode (LocationExp mode))
 
@@ -204,41 +205,25 @@ extend bindName ext ref ty = ty {
 extendTypeExt :: TypeExtension m -> TypeExtension m -> TypeExtension m
 extendTypeExt = M.unionWith (\a b -> b)
 
-{-
-substTypeExt :: VarName -> Int -> TypeExtension m -> TypeExtension m
-substTypeExt bindNameFrom bindNameTo =
-    fmap (substTypeExp bindNameFrom bindNameTo)
-
-substTypeRefine :: VarName -> Int -> TypeRefine m -> TypeRefine m
-substTypeRefine bindNameFrom bindNameTo = map (\(lhs, op, rhs) ->
-    (fmap (substExp bindNameFrom bindNameTo) lhs,
-     op,
-     substExp bindNameFrom bindNameTo rhs))
-
-substExp :: VarName -> Int -> Exp m -> Exp m
-substExp bindNameFrom bindNameTo (Exp exp) =
-    Exp (fmap (substLocation bindNameFrom bindNameTo) exp)
-
-substLocation :: VarName -> Int -> LocationF Root (Exp m) -> LocationF Root (Exp m)
-substLocation bindNameFrom bindNameTo = fmap (substExp bindNameFrom bindNameTo)
-
-substTypeExp :: VarName -> Int -> TypeExp m HDefault -> TypeExp m HDefault
-substTypeExp bindNameFrom bindNameTo = fmap $ \case
-    ty | BindName s <- typeExpBind ty, s == bindNameFrom -> ty
-       | otherwise -> ty{
-            typeExpExt = substTypeExt bindNameFrom (bindNameTo + 1) (typeExpExt ty),
-            typeExpRef = substTypeRefine bindNameFrom (bindNameTo + 1) (typeExpRef ty)
-        }
-        -}
-
+-- | intersection of two type expressions
+--
+-- Examples:
+--
+-- @
+--   { hoge: String } & { fuga: String } = { hoge: String, fuga: String }
+--   { hoge: String } & { hoge?: "hoge" } = { hoge: "hoge" }
+-- @
 intersect :: TypeExpF Desugar WHNF -> TypeExpF Desugar WHNF -> TypeExp Desugar WHNF
 intersect ty1 ty2
     | typeExpName ty1 /= typeExpName ty2 = LBot
     | typeExpName ty1 == typeExpName ty2 =
         pure ty1{
-            typeExpExt = M.unionWith LMeet (typeExpExt ty1) ext2,
+            typeExpExt = M.unionWith meet (typeExpExt ty1) ext2,
             typeExpRef = typeExpRef ty1 ++ ref2
         }
     where
         ext2 = typeExpExt ty2
         ref2 = typeExpRef ty2
+        meet (ty, opt) (ty', opt')= (LMeet ty ty', meetOpt opt opt')
+        meetOpt Optional x  = x
+        meetOpt Mandatory y = Mandatory
