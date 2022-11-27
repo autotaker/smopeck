@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v2
       with:
         ghc-version: '9.2.4'
         cabal-version: '3.6.2.0'
@@ -39,3 +39,20 @@ jobs:
       run: cabal v2-build
     - name: Run tests
       run: cabal v2-test
+
+  format:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: haskell/actions/setup@v2
+      with:
+        ghc-version: '9.2.4'
+        cabal-version: '3.6.2.0'
+    - name: install stylish-haskell
+      run: |
+        cabal install --constraint "stylish-haskell +ghc-lib" stylish-haskell
+    - name: run stylish-haskell
+      run: |
+        stylish-haskell -i
