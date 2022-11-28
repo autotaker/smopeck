@@ -59,8 +59,8 @@ jobs:
         key: ${{ runner.os }}-build-${{ env.cache-name }} }}
     - name: install stylish-haskell
       run: |
-        cabal install --constraint "stylish-haskell +ghc-lib" stylish-haskell
+        cabal install --constraint "stylish-haskell +ghc-lib" --overwrite-policy=always stylish-haskell
+        echo ~/.cabal/bin >> $GITHUB_PATH
     - name: run stylish-haskell
       run: |
-        source ~/.ghcup/env
         stylish-haskell -i
