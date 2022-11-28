@@ -78,6 +78,6 @@ For example `Int[ . > obj.optionalField?.size ]` is equal to
 `Int [ . > 10 ]` for object `{ optionalField : { size : 10 }}`,
 and is equal to `Int []` if `optinalField` is not set.
 
-You can set default value for optinal computation with `?>` operator.
-`Int [ . > (obj.optinalField?.size + 1) ?> 3 ]` is equal to
+You can set default value for optinal computation with `??` operator.
+`Int [ . > (obj.optinalField?.size + 1) ?? 3 ]` is equal to
 `Int [ . > 4 ]` if `optinalField` is not set.

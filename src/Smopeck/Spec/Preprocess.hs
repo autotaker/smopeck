@@ -42,9 +42,9 @@ preprocess file = do
                 & evalTypeExp typeEnv
                 & (\case
                 LElem TypeExpF{ typeExpExt = ext } ->
-                    let tyRes = evalTypeExp typeEnv $ ext M.! FieldString "response"
-                        tyParam = evalTypeExp typeEnv $ ext M.! FieldString "parameter"
-                        tyReq = evalTypeExp typeEnv $ ext M.! FieldString "request"
+                    let tyRes = evalTypeExp typeEnv $ fst $ ext M.! FieldString "response"
+                        tyParam = evalTypeExp typeEnv $ fst $ ext M.! FieldString "parameter"
+                        tyReq = evalTypeExp typeEnv $ fst $ ext M.! FieldString "request"
                         stdMethod = case parseMethod (BS.pack method) of
                             Left err -> error $ show err
                             Right v  -> v

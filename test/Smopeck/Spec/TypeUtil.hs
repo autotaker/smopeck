@@ -22,8 +22,8 @@ fObject :: TypeExtension 'Desugar -> TypeExp 'Desugar head
 fObject ext = fPrim PObject ext []
 fArray :: TypeExp 'Desugar 'HDefault -> TypeExp 'Desugar 'HDefault -> TypeExp 'Desugar head
 fArray size elt = fPrim PArray (M.fromList [
-    (FieldString "length", size),
-    (FieldIndex BindDebrujin , elt)]) []
+    (FieldString "length", (size,Mandatory)),
+    (FieldIndex BindDebrujin , (elt,Mandatory))]) []
 
 fCond :: Exp 'Desugar -> TypeExp 'Desugar 'HDefault -> TypeExp 'Desugar 'HDefault
 fCond e ty = LExt $ HasCondF e ty

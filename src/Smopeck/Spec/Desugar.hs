@@ -95,9 +95,9 @@ desugarTypeExpF env ty@TypeExpF{} = ty {
 desugarTypeExt :: BindEnv -> TypeExtension Parsed -> TypeExtension Desugar
 desugarTypeExt env = M.fromList . map f . M.toList
     where
-    f (FieldString s, ty) = (FieldString s, desugarTypeExp env ty)
-    f (FieldIndex (BindName i), ty) =
-        (FieldIndex BindDebrujin, desugarTypeExp (i:env) ty)
+    f (FieldString s, (ty, opt)) = (FieldString s, (desugarTypeExp env ty, opt))
+    f (FieldIndex (BindName i), (ty, opt)) =
+        (FieldIndex BindDebrujin, (desugarTypeExp (i:env) ty, opt))
 
 desugarTypeRef :: BindEnv -> TypeRefine Parsed -> TypeRefine Desugar
 desugarTypeRef env = map (\(op, e) -> (op, desugarExp env e))
@@ -112,6 +112,6 @@ desugarLocationExp env = go
             | Just i <- elemIndex s env = Root (Relative i)
             | otherwise = Root (Absolute s)
         go (Root (Relative i)) = Root (Relative i)
-        go (loc `Field` f) = go loc `Field` f
+        go (Field loc f opt) = Field (go loc) f opt
         go (loc `Get` e) = go loc `Get` desugarExp env e
 

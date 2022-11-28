@@ -17,10 +17,10 @@ spec = do
         it "test" $ do
             let tyInt = Syntax.fTypeExp "Int" "i" [] [ (Eq, Exp $ Var (Root (Absolute "obj")))]
                 tyObj :: TypeExp 'Parsed 'HDefault
-                tyObj = Syntax.fTypeExp "Object" "obj" [ (FieldString "hoge", tyInt)] []
+                tyObj = Syntax.fTypeExp "Object" "obj" [ (FieldString "hoge", (tyInt, Mandatory))] []
                 tyInt' = Desugar.fInt [ (Eq, Exp $ Var (Root (Relative 1)))]
                 tyObj' :: TypeExp 'Desugar 'HDefault
-                tyObj' = Desugar.fObject (M.fromList [ (FieldString "hoge", tyInt')])
+                tyObj' = Desugar.fObject (M.fromList [ (FieldString "hoge", (tyInt', Mandatory))])
             desugarTypeExp [] tyObj `shouldBe` tyObj'
         it "desugar literal type" $ do
             let tyLit = LElem $ LiteralType (LNumber 0)
@@ -28,7 +28,7 @@ spec = do
             desugarTypeExp [] tyLit `shouldBe` expected
         it "desugar dq string literal type" $ do
             let tyLit = LElem $ LiteralType (LDQString "${obj.string}")
-                expected = Desugar.fString [(Eq,Exp (App Add [Literal (LString ""),App (Func "str") [Var (Chain (Root (Relative 1)) (FieldString "string"))]]))]
+                expected = Desugar.fString [(Eq,Exp (App Add [Literal (LString ""),App (Func "str") [Var (Chain (Root (Relative 1)) (FieldString "string") Mandatory)]]))]
             desugarTypeExp ["obj"] tyLit `shouldBe` expected
 
     describe "Smopeck.Spec.Desugar.desugarString" $

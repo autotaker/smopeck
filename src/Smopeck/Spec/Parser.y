@@ -55,6 +55,9 @@ import Control.Monad.Free
     ')'      { Rpar }
     '@'      { As }
     '?'      { Cond }
+    '?:'     { QColon }
+    '??'     { QQuestion }
+    '?.'     { QDot }
     lower    { LowerId $$ }
     upper    { UpperId $$ }
     number   { Number $$ }
@@ -64,7 +67,7 @@ import Control.Monad.Free
 
 %left '|' '||'
 %left '&' '&&'
-%left '?'
+%left '?' '??'
 %nonassoc '=' '<' '>' '<=' '>='
 %left '+' '-'
 %left '*' '/' '%'
@@ -105,7 +108,8 @@ TypeExtension
 TypeExtensionList 
     : TypeBinding                       { [$1]    }
     | TypeBinding ',' TypeExtensionList { $1 : $3 }
-TypeBinding : Field ':' TypeExp { ($1, $3) }
+TypeBinding : Field ':' TypeExp { ($1, ($3, Mandatory)) }
+            | Field '?:' TypeExp { ($1, ($3, Optional)) }
 
 TypeRef
     : '[' ']' { [] }
@@ -134,7 +138,8 @@ EndpointDef : endpoint dqLiteral upper TypeExtension { EndpointDef $2 $3 $4 }
 
 LocationExp : '.' { Root (Relative 0) }
             | lower { Root (Absolute $1) }
-            | LocationExp '.' FieldExp { Chain $1 $3 }
+            | LocationExp '.' FieldExp { Chain $1 $3 Mandatory }
+            | LocationExp '?.' FieldExp { Chain $1 $3 Optional }
 
 Exp : ExpF { T.Exp $1 }
 ExpF 

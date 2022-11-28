@@ -108,13 +108,13 @@ extract loc =
       pairs <-
         mapM
           ( \f -> do
-              v <- extract (loc `Field` f)
+              v <- extract (Field loc f Mandatory)
               pure $ fromString f JSON..= v
           )
           $ S.toList fields
       pure $ JSON.object pairs
     VArray -> do
-      JSON.Number len <- extract $ loc `Field` "length"
+      JSON.Number len <- extract $ Field loc "length" Mandatory
       es <- forM [0 .. floor len - 1] $ extract . Get loc
       pure $ JSON.toJSON es
 
@@ -139,10 +139,10 @@ mockJsonWithEnv env venv ty = do
         insertValue key $ VObject $ S.fromList keys
         forM_ (KM.toList obj) $
           uncurry $
-            insert . Field key . K.toString
+            insert . (\s -> Field key s Mandatory) . K.toString
       insert key (JSON.Array arr) = do
         let size = V.length arr
-        insertValue (key `Field` "length") $
+        insertValue (Field key "length" Mandatory) $
           VNumber $
             fromIntegral size
         V.imapM_ (insert . Get key) arr
@@ -158,20 +158,28 @@ mockJsonWithEnv env venv ty = do
   mockJsonWithContext env ty ctx
 
 evalL :: ALocation -> Location -> SolveM Value
-evalL base loc' =
-  case resolve base loc' of
-    Right i -> pure $ VNumber (fromIntegral i)
-    Left loc -> do
-      tbl <- asks assignment
-      liftIO (H.lookup tbl loc) >>= \case
-        Just (Right v) -> pure v
-        Just (Left ty) -> do
-          v <- evalT loc ty
-          liftIO (H.insert tbl loc (Right v))
-          pure v
-        Nothing -> do
-          evalL base (parent loc')
-          evalL base loc'
+evalL base = go True
+  where
+    go first loc' =
+      case resolve base loc' of
+        Right i -> pure $ VNumber (fromIntegral i)
+        Left loc -> do
+          tbl <- asks assignment
+          liftIO (H.lookup tbl loc) >>= \case
+            Just (Right v) -> pure v
+            Just (Left ty) -> do
+              v <- evalT loc ty
+              liftIO (H.insert tbl loc (Right v))
+              pure v
+            Nothing 
+              | first -> do
+                -- location is not found, maybe because of laziness.
+                -- evaluate parent first
+                go first (parent loc')
+                go False loc'
+              | otherwise -> 
+                pure VUndefined
+                 
 
 evalT :: ALocation -> TypeExp -> SolveM Value
 evalT loc ty = do
@@ -204,24 +212,31 @@ evalT loc ty = do
     T.Prim T.PNull -> pure VNull
     T.Prim T.PObject -> do
       let exts = T.typeExpExt tyF
-          fields = S.fromList [field | FieldString field <- S.toList $ M.keysSet exts]
-      forM_ (M.toList exts) $ \(FieldString field, tyExp) -> do
+      fields <- flip filterM (M.toList exts) $ \(FieldString field, (tyExp, opt)) -> do
         env <- asks typeEnv
-        let tyExp' = T.evalTypeExp env tyExp
-            loc' = loc `Field` field
-        tbl <- asks assignment
-        liftIO (H.insert tbl loc' (Left tyExp'))
-      pure (VObject fields)
+        let genField_ = do
+              let tyExp' = T.evalTypeExp env tyExp
+                  loc' = Field loc field Mandatory
+              tbl <- asks assignment
+              liftIO (H.insert tbl loc' (Left tyExp'))
+        case opt of
+          Mandatory -> True <$ genField_
+          Optional -> do
+            gen <- asks randState
+            b <- uniform gen
+            when b genField_
+            pure b
+      pure $ VObject $ S.fromList [ s | (FieldString s,_) <- fields ]
     T.Prim T.PArray -> do
       env <- asks typeEnv
       let exts = T.typeExpExt tyF
-          lenTy = T.evalTypeExp env (exts M.! FieldString "length")
-          lenLoc = loc `Field` "length"
-      VNumber len <- evalT (loc `Field` "length") lenTy
+          lenTy = T.evalTypeExp env $ fst $ exts M.! FieldString "length"
+          lenLoc = Field loc "length" Mandatory
+      VNumber len <- evalT (Field loc "length" Mandatory) lenTy
       tbl <- asks assignment
       liftIO (H.insert tbl lenLoc (Right (VNumber len)))
       forM_ [0 .. floor len - 1] $ \i -> do
-        let getTy = T.evalTypeExp env (exts M.! FieldIndex T.BindDebrujin)
+        let getTy = T.evalTypeExp env $ fst $ exts M.! FieldIndex T.BindDebrujin
             getLoc = loc `Get` i
         liftIO (H.insert tbl getLoc (Left getTy))
       pure VArray
@@ -258,6 +273,5 @@ toNumber (LNumber n) = n
 toNumber _           = error "cannot convert to number"
 
 parent :: LocationF (Root blob) Int -> LocationF (Root blob) Int
-parent (p `Get` _)   = p
-parent (p `Field` _) = p
+parent (Chain p _ _) = p
 parent (Root _)      = error "no parent for root"

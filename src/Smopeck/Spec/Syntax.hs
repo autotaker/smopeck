@@ -30,7 +30,7 @@ type TypeExp = TypeExp.TypeExp Parsed TypeExp.HDefault
 type TypeEnv = TypeExp.DefaultTypeEnv Parsed
 type Primitive = TypeExp.Primitive
 
-type TypeExtension = [(Field (TypeExp.BindName Parsed), TypeExp) ]
+type TypeExtension = [(Field (TypeExp.BindName Parsed), (TypeExp, Optionality)) ]
 type Exp = TypeExp.Exp Parsed
 type TypeRefine = TypeExp.TypeRefine Parsed
 
