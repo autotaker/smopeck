@@ -50,6 +50,13 @@ jobs:
       with:
         ghc-version: '9.2.4'
         cabal-version: '3.6.2.0'
+    - name: Cache
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-cabal-format
+      with:
+        path: ~/.cabal
+        key: ${{ runner.os }}-build-${{ env.cache-name }} }}
     - name: install stylish-haskell
       run: |
         cabal install --constraint "stylish-haskell +ghc-lib" stylish-haskell
