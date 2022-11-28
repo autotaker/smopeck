@@ -55,4 +55,5 @@ jobs:
         cabal install --constraint "stylish-haskell +ghc-lib" stylish-haskell
     - name: run stylish-haskell
       run: |
+        source ~/.ghcup/env
         stylish-haskell -i
